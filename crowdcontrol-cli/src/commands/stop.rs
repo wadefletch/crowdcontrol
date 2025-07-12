@@ -60,8 +60,8 @@ async fn stop_agent(
     // Load agent metadata
     let mut agent = load_agent_metadata(config, name)?;
 
-    // Check current status
-    let status = docker.get_container_status(name).await?;
+    // Check current status (validates container_id and gets live status)
+    let status = agent.compute_live_status(docker).await?;
 
     if status != AgentStatus::Running {
         return Ok(false);
@@ -80,8 +80,8 @@ async fn stop_agent(
 
     print_success(&format!("Agent '{}' stopped successfully", name));
 
-    // Update agent status
-    agent.status = AgentStatus::Stopped;
+    // Clear container ID since container is now stopped
+    agent.container_id = None;
     save_agent_metadata(config, &agent)?;
 
     Ok(true)

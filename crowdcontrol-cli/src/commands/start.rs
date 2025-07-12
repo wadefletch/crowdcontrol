@@ -5,17 +5,17 @@ use tokio::time::sleep;
 use crate::commands::StartArgs;
 use crate::utils::*;
 use crowdcontrol_core::Config;
-use crowdcontrol_core::{load_agent_metadata, save_agent_metadata};
+use crowdcontrol_core::{load_agent_metadata};
 use crowdcontrol_core::{AgentStatus, DockerClient};
 pub async fn execute(config: Config, args: StartArgs) -> Result<()> {
     // Load agent metadata
-    let mut agent = load_agent_metadata(&config, &args.name)?;
+    let agent = load_agent_metadata(&config, &args.name)?;
 
     // Create Docker client
     let docker = DockerClient::new(config.clone())?;
 
-    // Check current status
-    let status = docker.get_container_status(&args.name).await?;
+    // Check current status (validates container_id and gets live status)
+    let status = agent.compute_live_status(&docker).await?;
 
     match status {
         AgentStatus::Running => {
@@ -58,7 +58,7 @@ pub async fn execute(config: Config, args: StartArgs) -> Result<()> {
             }
 
             // Check if container is still running
-            let status = docker.get_container_status(&args.name).await?;
+            let status = agent.compute_live_status(&docker).await?;
             if status != AgentStatus::Running {
                 pb.finish_and_clear();
                 return Err(anyhow!("Agent stopped unexpectedly during initialization"));
@@ -73,9 +73,7 @@ pub async fn execute(config: Config, args: StartArgs) -> Result<()> {
         }
     }
 
-    // Update agent status
-    agent.status = AgentStatus::Running;
-    save_agent_metadata(&config, &agent)?;
+    // Note: Agent status is now computed live from Docker, no need to save it
 
     print_info(&format!(
         "Connect to the agent with: crowdcontrol connect {}",

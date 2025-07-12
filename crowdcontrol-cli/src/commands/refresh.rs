@@ -3,14 +3,11 @@ use std::process::Command;
 
 use crate::commands::RefreshArgs;
 use crate::utils::*;
-use crowdcontrol_core::{Config, DockerClient};
+use crowdcontrol_core::{Config, DockerClient, load_agent_metadata};
 
 pub async fn execute(config: Config, args: RefreshArgs) -> Result<()> {
-    // Check if agent exists
-    let workspace_path = config.agent_workspace_path(&args.name);
-    if !workspace_path.exists() {
-        return Err(anyhow!("Agent '{}' does not exist", args.name));
-    }
+    // Load agent metadata
+    let agent = load_agent_metadata(&config, &args.name)?;
 
     print_info(&format!(
         "Refreshing Claude Code authentication for agent: {}",
@@ -20,23 +17,17 @@ pub async fn execute(config: Config, args: RefreshArgs) -> Result<()> {
     // Create Docker client
     let docker = DockerClient::new(config.clone())?;
 
-    // Check if container exists and is running
-    let container_name = format!("crowdcontrol-{}", args.name);
-    if !docker.container_exists(&container_name).await? {
-        return Err(anyhow!(
-            "Container for agent '{}' does not exist",
-            args.name
-        ));
-    }
-
-    // Get container status
-    let status = docker.get_container_status(&args.name).await?;
+    // Get container status (validates container_id and gets live status)
+    let status = agent.compute_live_status(&docker).await?;
     if !matches!(status, crowdcontrol_core::AgentStatus::Running) {
         return Err(anyhow!(
             "Agent '{}' must be running to refresh configs. Start it first with: crowdcontrol start {}",
             args.name, args.name
         ));
     }
+
+    // Get container name for exec operations
+    let container_name = format!("crowdcontrol-{}", args.name);
 
     // Run the refresh script, optionally with keychain credentials
     if args.extract_keychain {

@@ -8,13 +8,13 @@ use crowdcontrol_core::Config;
 use crowdcontrol_core::{AgentStatus, DockerClient};
 pub async fn execute(config: Config, args: ConnectArgs) -> Result<()> {
     // Load agent metadata
-    let _agent = load_agent_metadata(&config, &args.name)?;
+    let agent = load_agent_metadata(&config, &args.name)?;
 
     // Create Docker client
     let docker = DockerClient::new(config.clone())?;
 
-    // Check if container is running
-    let status = docker.get_container_status(&args.name).await?;
+    // Check if container is running (validates container_id and gets live status)
+    let status = agent.compute_live_status(&docker).await?;
     if status != AgentStatus::Running {
         return Err(anyhow!(
             "Agent '{}' is not running. Start it with: crowdcontrol start {}",

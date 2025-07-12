@@ -37,9 +37,9 @@ pub async fn execute(config: Config, args: ListArgs) -> Result<()> {
             Err(_) => continue,
         };
 
-        // Get current status from Docker
-        let status = docker
-            .get_container_status(&agent_name)
+        // Get current live status (this validates container_id and gets status from Docker)
+        let status = agent
+            .compute_live_status(&docker)
             .await
             .unwrap_or(AgentStatus::Error);
 
