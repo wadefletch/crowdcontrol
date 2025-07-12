@@ -1,0 +1,22 @@
+# CrowdControl Configuration File
+# Place this file at ~/.config/crowdcontrol/config.toml
+
+# Directory for storing agent workspaces
+# Default: ~/crowdcontrol-workspaces
+# workspaces_dir = "~/crowdcontrol-workspaces"
+
+# Docker image to use for agents
+# Default: crowdcontrol:latest
+# image = "crowdcontrol:latest"
+
+# Default memory limit for new agents
+# Examples: "512m", "2g", "4096m"
+# default_memory = "2g"
+
+# Default CPU limit for new agents  
+# Examples: "0.5", "1", "2"
+# default_cpus = "1"
+
+# Verbosity level (0-2)
+# 0 = normal, 1 = verbose, 2 = debug
+# verbose = 0
