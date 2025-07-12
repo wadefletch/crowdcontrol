@@ -28,91 +28,38 @@ This architecture allows for easy extension with additional interfaces (e.g., HT
 
 ## Installation
 
-### Option 1: npm/pnpm (Cross-platform)
+### npm (recommended)
 
 ```bash
-# Install globally via npm
 npm install -g @wadefletch/crowdcontrol
-
-# Or with pnpm
-pnpm install -g @wadefletch/crowdcontrol
-
-# Pull the Docker image
 docker pull crowdcontrol/crowdcontrol:latest
-
-# Verify installation
-crowdcontrol --help
 ```
 
-### Option 2: Cargo (Rust developers)
+### Cargo
 
 ```bash
-# Install via Cargo
 cargo install crowdcontrol-cli
-
-# Pull the Docker image
 docker pull crowdcontrol/crowdcontrol:latest
-
-# Verify installation
-crowdcontrol --help
 ```
 
-### Option 3: Download Pre-built Binaries
+### Pre-built binaries
 
-Download the latest release for your platform from the [releases page](https://github.com/wadefletch/crowdcontrol/releases).
+Download from [releases](https://github.com/wadefletch/crowdcontrol/releases) or:
 
 ```bash
-# Example for macOS (replace with your platform)
-curl -L -o crowdcontrol.tar.gz https://github.com/wadefletch/crowdcontrol/releases/latest/download/crowdcontrol-aarch64-apple-darwin.tar.gz
-tar -xzf crowdcontrol.tar.gz
+# macOS example
+curl -L https://github.com/wadefletch/crowdcontrol/releases/latest/download/crowdcontrol-aarch64-apple-darwin.tar.gz | tar -xz
 sudo mv crowdcontrol /usr/local/bin/
-
-# Pull the Docker image
 docker pull crowdcontrol/crowdcontrol:latest
-
-# Verify installation
-crowdcontrol --help
 ```
 
-### Option 4: Build from Source
-
-1. **Clone the repository**:
-
-   ```bash
-   git clone git@github.com:wadefletch/crowdcontrol.git
-   cd crowdcontrol
-   ```
-
-2. **Build the Docker image** (if you want to customize):
-
-   ```bash
-   docker build -t crowdcontrol:latest ./container/
-   ```
-
-3. **Build and install the CLI**:
-
-   ```bash
-   cargo build --release
-   cargo install --path crowdcontrol-cli
-   ```
-
-4. **Verify installation**:
-
-   ```bash
-   crowdcontrol --help
-   ```
-
-### Shell Completions (Optional)
+### Build from source
 
 ```bash
-# For bash
-crowdcontrol completions bash > /etc/bash_completion.d/crowdcontrol
-
-# For zsh
-crowdcontrol completions zsh > ~/.zsh/completions/_crowdcontrol
-
-# For fish
-crowdcontrol completions fish > ~/.config/fish/completions/crowdcontrol.fish
+git clone git@github.com:wadefletch/crowdcontrol.git
+cd crowdcontrol
+cargo install --path crowdcontrol-cli
+docker build -t crowdcontrol:latest ./container/
 ```
 
 ## Usage
@@ -319,7 +266,6 @@ crowdcontrol/
 ├── .github/workflows/       # CI/CD workflows
 ├── .cargo/config.toml       # Cargo aliases
 ├── cog.toml                 # Cocogitto configuration
-├── install.sh               # Installation script
 └── Cargo.toml               # Workspace configuration
 ```
 
