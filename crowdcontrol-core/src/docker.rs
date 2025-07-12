@@ -12,10 +12,8 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
-use std::fs;
 use std::path::PathBuf;
 use tracing::{debug, info, trace, warn};
-use uuid;
 
 use crate::Config;
 
