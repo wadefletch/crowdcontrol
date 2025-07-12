@@ -138,6 +138,17 @@ impl DockerClient {
         memory: Option<String>,
         cpus: Option<String>,
     ) -> Result<String> {
+        self.create_container_with_github(name, workspace_path, memory, cpus)
+            .await
+    }
+
+    pub async fn create_container_with_github(
+        &self,
+        name: &str,
+        workspace_path: &PathBuf,
+        memory: Option<String>,
+        cpus: Option<String>,
+    ) -> Result<String> {
         let container_name = format!("crowdcontrol-{}", name);
 
         info!(
@@ -217,13 +228,21 @@ impl DockerClient {
         let mut labels = HashMap::new();
         labels.insert("app".to_string(), "crowdcontrol".to_string());
         
+        // Prepare environment variables
+        let mut env_vars = vec![
+            format!("HOST_UID={}", user_id),
+            format!("HOST_GID={}", group_id),
+        ];
+
+        // Add GitHub environment variables if configured
+        if let Some(github_config) = &self.config.github {
+            env_vars.extend(github_config.to_container_env_vars());
+        }
+        
         let container_config = ContainerConfig {
             image: Some(self.config.image.clone()),
             host_config: Some(host_config),
-            env: Some(vec![
-                format!("HOST_UID={}", user_id),
-                format!("HOST_GID={}", group_id),
-            ]),
+            env: Some(env_vars),
             labels: Some(labels),
             ..Default::default()
         };
