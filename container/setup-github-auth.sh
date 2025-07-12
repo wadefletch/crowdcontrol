@@ -24,8 +24,10 @@ if [ -z "$GITHUB_INSTALLATION_TOKEN" ] && [ -z "$GITHUB_APP_ID" ]; then
     exit 1
 fi
 
-# Configure git globally to use HTTPS instead of SSH
-run_as_developer 'git config --global url."https://github.com/".insteadOf "git@github.com:"'
+# Configure git globally to use HTTPS instead of SSH (supports GitHub Enterprise)
+GITHUB_BASE_URL=${GITHUB_BASE_URL:-"https://github.com"}
+GITHUB_HOST=$(echo "$GITHUB_BASE_URL" | sed 's|https://||')
+run_as_developer "git config --global url.\"$GITHUB_BASE_URL/\".insteadOf \"git@$GITHUB_HOST:\""
 
 # Set up credential helper
 run_as_developer 'git config --global credential.helper store'
@@ -45,17 +47,17 @@ fi
 
 # Set up GitHub credentials
 if [ -n "$GITHUB_INSTALLATION_TOKEN" ]; then
-    echo "Configuring GitHub with installation token..."
+    echo "Configuring GitHub with installation token for $GITHUB_BASE_URL..."
     
     # Create credentials file with proper ownership
     CREDS_FILE="/home/developer/.git-credentials"
-    echo "https://x-access-token:$GITHUB_INSTALLATION_TOKEN@github.com" > "$CREDS_FILE"
+    echo "https://x-access-token:$GITHUB_INSTALLATION_TOKEN@$GITHUB_HOST" > "$CREDS_FILE"
     
     # Set proper ownership and permissions
     chown "$USER_ID:$GROUP_ID" "$CREDS_FILE"
     chmod 600 "$CREDS_FILE"
     
-    echo "GitHub authentication configured successfully with installation token"
+    echo "GitHub authentication configured successfully with installation token for $GITHUB_BASE_URL"
     
 elif [ -n "$GITHUB_APP_ID" ] && [ -n "$GITHUB_INSTALLATION_ID" ]; then
     echo "GitHub App configuration detected (app_id: $GITHUB_APP_ID, installation_id: $GITHUB_INSTALLATION_ID)"

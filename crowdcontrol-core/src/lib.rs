@@ -9,7 +9,7 @@ pub mod state_validator;
 pub use agent::*;
 pub use config::Config;
 pub use docker::{Agent, AgentStatus, DockerClient};
-pub use github::GitHubConfig;
+pub use github::{GitHubConfig, GitHubCredentialManager, GitHubCredentialTemplate, CachedToken};
 pub use logger::init_logger;
 pub use settings::Settings;
 pub use state_validator::{StateInconsistency, StateValidator};
