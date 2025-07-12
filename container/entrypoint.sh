@@ -15,12 +15,8 @@ if [ "$(id -u)" = "0" ]; then
     groupmod -g $GROUP_ID developer 2>/dev/null || true
     usermod -u $USER_ID -g $GROUP_ID developer 2>/dev/null || true
     
-    # Fix ownership of home directory, excluding mounted directories
-    # We need to be careful not to try to chown read-only mounts
+    # Fix ownership of home directory
     find /home/developer -mindepth 1 -maxdepth 1 \
-        ! -name '.ssh' \
-        ! -name '.gitconfig' \
-        ! -name '.config' \
         -exec chown -R $USER_ID:$GROUP_ID {} \; 2>/dev/null || true
     
     # Ensure home directory itself has correct ownership
@@ -28,16 +24,6 @@ if [ "$(id -u)" = "0" ]; then
     
     # Setup Claude Code authentication using the refresh script
     /usr/local/bin/refresh-claude-auth.sh || echo "   (This is normal if Claude Code isn't configured on the host)"
-    
-    # SSH and git configs are mounted read-only, so we can't change permissions
-    # Just note their presence
-    if [ -d "/home/developer/.ssh" ]; then
-        echo "✅ SSH configuration mounted (read-only)"
-    fi
-    
-    if [ -f "/home/developer/.gitconfig" ] || [ -d "/home/developer/.config/git" ]; then
-        echo "✅ Git configuration mounted (read-only)"
-    fi
     
     # Start docker daemon in background
     dockerd &
@@ -80,6 +66,9 @@ export CROWDCONTROL_REPO_PATH="$REPO_DIR"
 export CROWDCONTROL_REPO_NAME="$REPO_NAME"
 export CROWDCONTROL_WORKSPACE="/workspace"
 
+# Set Claude config directory to home
+export CLAUDE_CONFIG_DIR="/home/developer"
+
 # Run repository-specific setup if it exists and hasn't been run
 if [ -f ".crowdcontrol/setup.sh" ] && [ ! -f ".crowdcontrol/.setup-complete" ]; then
     echo "Running repository setup for $REPO_NAME..."
@@ -108,7 +97,7 @@ if [ -f ".crowdcontrol/start.sh" ]; then
 fi
 
 echo "Container ready for development"
-echo "Connect with: docker exec -it \$CONTAINER_NAME claude --dangerously-skip-permissions"
+echo "Connect with: docker exec -it \$CONTAINER_NAME claude"
 
 # Keep container running
 tail -f /dev/null
