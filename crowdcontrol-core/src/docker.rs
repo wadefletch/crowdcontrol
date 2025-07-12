@@ -164,42 +164,6 @@ impl DockerClient {
             },
         ];
 
-        // Add SSH keys if available (mounted read-only)
-        let ssh_dir = dirs::home_dir().unwrap().join(".ssh");
-        if ssh_dir.exists() {
-            mounts.push(Mount {
-                target: Some("/home/developer/.ssh".to_string()),
-                source: Some(ssh_dir.to_string_lossy().to_string()),
-                typ: Some(MountTypeEnum::BIND),
-                read_only: Some(true),
-                ..Default::default()
-            });
-        }
-
-        // Add git config file if available (mounted read-only)
-        let git_config_file = dirs::home_dir().unwrap().join(".gitconfig");
-        if git_config_file.exists() {
-            mounts.push(Mount {
-                target: Some("/home/developer/.gitconfig".to_string()),
-                source: Some(git_config_file.to_string_lossy().to_string()),
-                typ: Some(MountTypeEnum::BIND),
-                read_only: Some(true),
-                ..Default::default()
-            });
-        }
-
-        // Add git config directory if available (mounted read-only)
-        let git_config_dir = dirs::home_dir().unwrap().join(".config/git");
-        if git_config_dir.exists() {
-            mounts.push(Mount {
-                target: Some("/home/developer/.config/git".to_string()),
-                source: Some(git_config_dir.to_string_lossy().to_string()),
-                typ: Some(MountTypeEnum::BIND),
-                read_only: Some(true),
-                ..Default::default()
-            });
-        }
-
         // Mount Claude config - both new and legacy formats
         let home_dir = dirs::home_dir().unwrap();
         

@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install core dependencies
 RUN apt-get update && apt-get install -y \
     docker.io \
-    git ssh-client curl wget \
+    git curl wget \
     jq unzip build-essential \
     sudo vim nano \
     net-tools \
