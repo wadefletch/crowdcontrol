@@ -40,9 +40,9 @@ if [ -f "/mnt/claude-config/.claude.json" ]; then
     echo "Copying .claude.json from mount (legacy format)..."
     cp /mnt/claude-config/.claude.json /home/developer/.claude.json
     
-    # Apply jq transformations: disable autoUpdates and reset projects
+    # Apply jq transformations: disable autoUpdates, reset projects, set mode to global
     echo "Applying transformations to .claude.json..."
-    jq '.autoUpdates = false | .projects = {}' /home/developer/.claude.json > /home/developer/.claude.json.tmp
+    jq '.autoUpdates = false | .projects = {} | .mode = "global"' /home/developer/.claude.json > /home/developer/.claude.json.tmp
     mv /home/developer/.claude.json.tmp /home/developer/.claude.json
     
     chown $USER_ID:$GROUP_ID /home/developer/.claude.json

@@ -285,24 +285,8 @@ pub fn clone_repository(
 }
 
 pub fn verify_repository_setup(workspace_path: &PathBuf) -> Result<bool> {
-    // Find the repository directory
-    let repo_dirs: Vec<_> = fs::read_dir(workspace_path)?
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.path().is_dir())
-        .filter(|entry| !entry.file_name().to_string_lossy().starts_with('.'))
-        .collect();
-
-    if repo_dirs.is_empty() {
-        return Err(anyhow!("No repository directory found in workspace"));
-    }
-
-    if repo_dirs.len() > 1 {
-        return Err(anyhow!("Multiple directories found in workspace"));
-    }
-
-    let repo_path = repo_dirs[0].path();
-    let crowdcontrol_dir = repo_path.join(".crowdcontrol");
-
+    // Repository is now cloned directly to workspace root, so check for .crowdcontrol there
+    let crowdcontrol_dir = workspace_path.join(".crowdcontrol");
     Ok(crowdcontrol_dir.exists())
 }
 

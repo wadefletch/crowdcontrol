@@ -303,12 +303,23 @@ impl DockerClient {
         cmd: Vec<&str>,
         attach: bool,
     ) -> Result<()> {
+        self.exec_in_container_as_user(container_id, cmd, attach, None).await
+    }
+
+    pub async fn exec_in_container_as_user(
+        &self,
+        container_id: &str,
+        cmd: Vec<&str>,
+        attach: bool,
+        user: Option<&str>,
+    ) -> Result<()> {
         let exec_config = CreateExecOptions {
             cmd: Some(cmd),
             attach_stdout: Some(attach),
             attach_stderr: Some(attach),
             attach_stdin: Some(attach),
             tty: Some(attach),
+            user,
             ..Default::default()
         };
 

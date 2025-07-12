@@ -37,7 +37,7 @@ pub async fn execute(config: Config, args: ConnectArgs) -> Result<()> {
     if args.detach {
         // Run in background
         docker
-            .exec_in_container(&container_name, command_parts, false)
+            .exec_in_container_as_user(&container_name, command_parts, false, Some("developer"))
             .await?;
         print_success(&format!(
             "Command started in background in agent '{}'",
@@ -51,6 +51,8 @@ pub async fn execute(config: Config, args: ConnectArgs) -> Result<()> {
         let mut cmd = Command::new("docker")
             .arg("exec")
             .arg("-it")
+            .arg("-u")
+            .arg("developer")
             .arg(&container_name)
             .args(&command_parts)
             .stdin(Stdio::inherit())

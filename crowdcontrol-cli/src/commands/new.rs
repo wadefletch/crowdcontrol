@@ -25,13 +25,12 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
     fs::create_dir_all(&workspace_path)
         .with_context(|| format!("Failed to create workspace directory: {:?}", workspace_path))?;
 
-    // Clone repository
-    let repo_target = workspace_path.join(&args.name);
+    // Clone repository directly to workspace root
     let pb = create_progress_bar("Cloning repository...");
 
     // Wrap clone operation in a closure that handles cleanup on failure
     let clone_result =
-        (|| clone_repository(&args.repository, &repo_target, args.branch.as_deref()))();
+        (|| clone_repository(&args.repository, &workspace_path, args.branch.as_deref()))();
 
     pb.finish_and_clear();
 
