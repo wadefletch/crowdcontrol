@@ -23,9 +23,18 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code
 
-# Copy and configure entrypoint
+# Create developer user with configurable UID/GID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN groupadd -g ${GROUP_ID} developer && \
+    useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash developer && \
+    usermod -aG sudo,docker developer && \
+    echo 'developer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Copy and configure entrypoint and scripts
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY refresh-claude-auth.sh /usr/local/bin/refresh-claude-auth.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/refresh-claude-auth.sh
 
 # Set working directory
 WORKDIR /workspace

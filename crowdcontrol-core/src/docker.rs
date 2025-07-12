@@ -9,11 +9,13 @@ use bollard::models::{HostConfig, Mount, MountTypeEnum};
 use bollard::{Docker, API_DEFAULT_VERSION};
 use chrono::{DateTime, Utc};
 use futures_util::StreamExt;
-use tracing::{debug, info, trace, warn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
+use std::fs;
 use std::path::PathBuf;
+use tracing::{debug, info, trace, warn};
+use uuid;
 
 use crate::Config;
 
@@ -44,7 +46,7 @@ pub struct DockerClient {
 impl DockerClient {
     pub fn new(config: Config) -> Result<Self> {
         debug!("Initializing Docker client");
-        
+
         // Use connect_with_defaults() which respects DOCKER_HOST env var
         // If DOCKER_HOST is not set, it will try default locations
         let docker = if let Ok(docker_host) = env::var("DOCKER_HOST") {
@@ -119,16 +121,20 @@ impl DockerClient {
         cpus: Option<String>,
     ) -> Result<String> {
         let container_name = format!("crowdcontrol-{}", name);
-        
+
         info!(
-            "Creating container '{}' with workspace: {:?}, memory: {:?}, cpus: {:?}", 
+            "Creating container '{}' with workspace: {:?}, memory: {:?}, cpus: {:?}",
             container_name, workspace_path, memory, cpus
         );
 
         // Set up mounts - canonicalize path to avoid Docker Desktop issues
-        let canonical_workspace = workspace_path.canonicalize()
-            .with_context(|| format!("Failed to canonicalize workspace path: {:?}", workspace_path))?;
-        
+        let canonical_workspace = workspace_path.canonicalize().with_context(|| {
+            format!(
+                "Failed to canonicalize workspace path: {:?}",
+                workspace_path
+            )
+        })?;
+
         let mut mounts = vec![
             // Mount workspace
             Mount {
@@ -140,11 +146,11 @@ impl DockerClient {
             },
         ];
 
-        // Add SSH keys if available
+        // Add SSH keys if available (mounted read-only)
         let ssh_dir = dirs::home_dir().unwrap().join(".ssh");
         if ssh_dir.exists() {
             mounts.push(Mount {
-                target: Some("/root/.ssh".to_string()),
+                target: Some("/home/developer/.ssh".to_string()),
                 source: Some(ssh_dir.to_string_lossy().to_string()),
                 typ: Some(MountTypeEnum::BIND),
                 read_only: Some(true),
@@ -152,11 +158,11 @@ impl DockerClient {
             });
         }
 
-        // Add git config file if available
+        // Add git config file if available (mounted read-only)
         let git_config_file = dirs::home_dir().unwrap().join(".gitconfig");
         if git_config_file.exists() {
             mounts.push(Mount {
-                target: Some("/root/.gitconfig".to_string()),
+                target: Some("/home/developer/.gitconfig".to_string()),
                 source: Some(git_config_file.to_string_lossy().to_string()),
                 typ: Some(MountTypeEnum::BIND),
                 read_only: Some(true),
@@ -164,11 +170,11 @@ impl DockerClient {
             });
         }
 
-        // Add git config directory if available
+        // Add git config directory if available (mounted read-only)
         let git_config_dir = dirs::home_dir().unwrap().join(".config/git");
         if git_config_dir.exists() {
             mounts.push(Mount {
-                target: Some("/root/.config/git".to_string()),
+                target: Some("/home/developer/.config/git".to_string()),
                 source: Some(git_config_dir.to_string_lossy().to_string()),
                 typ: Some(MountTypeEnum::BIND),
                 read_only: Some(true),
@@ -176,12 +182,25 @@ impl DockerClient {
             });
         }
 
-        // Add Claude Code config if available
-        let claude_config = dirs::home_dir().unwrap().join(".claude");
-        if claude_config.exists() {
+        // Always mount Claude config directory if it exists - simple persistent mount
+        let home_dir = dirs::home_dir().unwrap();
+        let claude_dir = home_dir.join(".claude");
+        if claude_dir.exists() {
             mounts.push(Mount {
-                target: Some("/root/.claude".to_string()),
-                source: Some(claude_config.to_string_lossy().to_string()),
+                target: Some("/mnt/host-claude-config/.claude".to_string()),
+                source: Some(claude_dir.to_string_lossy().to_string()),
+                typ: Some(MountTypeEnum::BIND),
+                read_only: Some(true),
+                ..Default::default()
+            });
+        }
+
+        // Also mount legacy .claude.json if it exists
+        let claude_legacy = home_dir.join(".claude.json");
+        if claude_legacy.exists() {
+            mounts.push(Mount {
+                target: Some("/mnt/host-claude-config/.claude.json".to_string()),
+                source: Some(claude_legacy.to_string_lossy().to_string()),
                 typ: Some(MountTypeEnum::BIND),
                 read_only: Some(true),
                 ..Default::default()
@@ -206,9 +225,17 @@ impl DockerClient {
             host_config.cpu_period = Some(100000);
         }
 
+        // Get host UID/GID for user mapping
+        let user_id = unsafe { libc::getuid() };
+        let group_id = unsafe { libc::getgid() };
+
         let container_config = ContainerConfig {
             image: Some(self.config.image.clone()),
             host_config: Some(host_config),
+            env: Some(vec![
+                format!("HOST_UID={}", user_id),
+                format!("HOST_GID={}", group_id),
+            ]),
             ..Default::default()
         };
 
@@ -241,7 +268,7 @@ impl DockerClient {
         let options = if force {
             StopContainerOptions { t: 0 }
         } else {
-            StopContainerOptions { t: 5 }  // Quick stop for dev containers
+            StopContainerOptions { t: 5 } // Quick stop for dev containers
         };
 
         self.docker
@@ -334,14 +361,15 @@ impl DockerClient {
     pub async fn list_all_containers(&self) -> Result<Vec<bollard::models::ContainerSummary>> {
         let mut filters = HashMap::new();
         filters.insert("label".to_string(), vec!["app=crowdcontrol".to_string()]);
-        
+
         let options = ListContainersOptions {
-            all: true,  // Include stopped containers
+            all: true, // Include stopped containers
             filters,
             ..Default::default()
         };
-        
-        self.docker.list_containers(Some(options))
+
+        self.docker
+            .list_containers(Some(options))
             .await
             .context("Failed to list containers")
     }
@@ -382,7 +410,9 @@ impl DockerClient {
         // First check if the image exists locally
         let images = self.docker.list_images::<String>(None).await?;
         let image_exists = images.iter().any(|img| {
-            img.repo_tags.iter().any(|tag| tag == &self.config.image || tag.starts_with(&format!("{}:", self.config.image)))
+            img.repo_tags.iter().any(|tag| {
+                tag == &self.config.image || tag.starts_with(&format!("{}:", self.config.image))
+            })
         });
 
         if image_exists {

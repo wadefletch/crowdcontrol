@@ -3,36 +3,42 @@ use dialoguer::Confirm;
 use std::fs;
 
 use crate::commands::RemoveArgs;
-use crowdcontrol_core::Config;
-use crowdcontrol_core::DockerClient;
 use crate::utils::*;
 use crowdcontrol_core::load_agent_metadata;
+use crowdcontrol_core::Config;
+use crowdcontrol_core::DockerClient;
 pub async fn execute(config: Config, args: RemoveArgs) -> Result<()> {
     // Load agent metadata
     let agent = load_agent_metadata(&config, &args.name)?;
-    
+
     // Confirm removal if not forced
     if !args.force {
         let prompt = if args.keep_workspace {
-            format!("Are you sure you want to remove the container for agent '{}'?", args.name)
+            format!(
+                "Are you sure you want to remove the container for agent '{}'?",
+                args.name
+            )
         } else {
-            format!("Are you sure you want to remove agent '{}' and its workspace?", args.name)
+            format!(
+                "Are you sure you want to remove agent '{}' and its workspace?",
+                args.name
+            )
         };
-        
+
         let confirm = Confirm::new()
             .with_prompt(prompt)
             .default(false)
             .interact()?;
-        
+
         if !confirm {
             print_info("Removal cancelled");
             return Ok(());
         }
     }
-    
+
     // Create Docker client
     let docker = DockerClient::new(config.clone())?;
-    
+
     // Remove container if it exists
     if let Some(container_id) = &agent.container_id {
         let pb = create_progress_bar("Removing container...");
@@ -47,7 +53,7 @@ pub async fn execute(config: Config, args: RemoveArgs) -> Result<()> {
             }
         }
     }
-    
+
     // Remove workspace directory if requested
     if !args.keep_workspace {
         let pb = create_progress_bar("Removing workspace directory...");
@@ -62,8 +68,8 @@ pub async fn execute(config: Config, args: RemoveArgs) -> Result<()> {
         }
         print_info("Workspace directory kept");
     }
-    
+
     print_success(&format!("Agent '{}' removed successfully", args.name));
-    
+
     Ok(())
 }

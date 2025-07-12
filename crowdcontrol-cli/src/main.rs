@@ -86,6 +86,9 @@ enum Commands {
     /// Show agent logs
     Logs(LogsArgs),
 
+    /// Refresh Claude Code authentication for an agent
+    Refresh(RefreshArgs),
+
     /// Generate shell completions
     Completions(CompletionsArgs),
 
@@ -128,6 +131,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::List(args) => list::execute(config, args).await,
         Commands::Remove(args) => remove::execute(config, args).await,
         Commands::Logs(args) => logs::execute(config, args).await,
+        Commands::Refresh(args) => refresh::execute(config, args).await,
         Commands::Completions(args) => completions::execute(config, args).await,
         Commands::Doctor(args) => doctor::execute(config, args).await,
     }

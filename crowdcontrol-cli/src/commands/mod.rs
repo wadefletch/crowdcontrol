@@ -6,6 +6,7 @@ pub mod doctor;
 pub mod list;
 pub mod logs;
 pub mod new;
+pub mod refresh;
 pub mod remove;
 pub mod start;
 pub mod stop;
@@ -164,6 +165,14 @@ pub struct CompletionsArgs {
     /// Shell to generate completions for
     #[arg(help = "Shell to generate completions for")]
     pub shell: clap_complete::Shell,
+}
+
+/// Arguments for the refresh command
+#[derive(Args)]
+pub struct RefreshArgs {
+    /// Name of the agent to refresh Claude Code authentication for
+    #[arg(help = "Name of the agent to refresh Claude Code authentication for")]
+    pub name: String,
 }
 
 /// Output format options

@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
-use tracing::{debug, trace};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use tracing::{debug, trace};
 
 use crate::Settings;
 
@@ -20,9 +20,12 @@ impl Config {
     pub fn from_settings(settings: Settings) -> Result<Self> {
         debug!("Creating config from settings");
         trace!("Settings: {:?}", settings);
-        
+
         // Ensure workspaces directory exists
-        debug!("Creating workspaces directory: {:?}", settings.workspaces_dir);
+        debug!(
+            "Creating workspaces directory: {:?}",
+            settings.workspaces_dir
+        );
         fs::create_dir_all(&settings.workspaces_dir).with_context(|| {
             format!(
                 "Failed to create workspaces directory: {:?}",

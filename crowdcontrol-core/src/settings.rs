@@ -1,27 +1,27 @@
 use anyhow::{Context, Result};
 use config::{Config as ConfigBuilder, Environment, File};
-use tracing::{debug, info, trace};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use tracing::{debug, info, trace};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     /// Directory for storing agent workspaces
     #[serde(default = "default_workspaces_dir")]
     pub workspaces_dir: PathBuf,
-    
+
     /// Docker image to use for agents
     #[serde(default = "default_image")]
     pub image: String,
-    
+
     /// Default memory limit for agents
     #[serde(default)]
     pub default_memory: Option<String>,
-    
+
     /// Default CPU limit for agents
     #[serde(default)]
     pub default_cpus: Option<String>,
-    
+
     /// Verbosity level
     #[serde(default)]
     pub verbose: u8,
@@ -41,7 +41,7 @@ impl Default for Settings {
 
 impl Settings {
     /// Load settings from config file and environment variables
-    /// 
+    ///
     /// Priority order (highest to lowest):
     /// 1. CLI arguments (handled by caller)
     /// 2. Environment variables (CROWDCONTROL_*)
@@ -49,11 +49,11 @@ impl Settings {
     /// 4. Default values
     pub fn load() -> Result<Self> {
         debug!("Loading settings from configuration sources");
-        
+
         let config_path = dirs::config_dir()
             .map(|p| p.join("crowdcontrol/config.toml"))
             .filter(|p| p.exists());
-        
+
         if let Some(ref path) = config_path {
             info!("Found config file at: {:?}", path);
         } else {
@@ -61,7 +61,10 @@ impl Settings {
         }
 
         let mut builder = ConfigBuilder::builder()
-            .set_default("workspaces_dir", default_workspaces_dir().to_string_lossy().to_string())?
+            .set_default(
+                "workspaces_dir",
+                default_workspaces_dir().to_string_lossy().to_string(),
+            )?
             .set_default("image", default_image())?;
 
         // Add config file if it exists
@@ -73,7 +76,7 @@ impl Settings {
         builder = builder.add_source(
             Environment::with_prefix("CROWDCONTROL")
                 .separator("_")
-                .try_parsing(true)
+                .try_parsing(true),
         );
 
         let settings = builder

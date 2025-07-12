@@ -5,22 +5,53 @@ set -e
 
 echo "Starting crowdcontrol development environment..."
 
-# Start docker daemon in background
-dockerd &
-
-# Wait for docker to be ready
-echo "Waiting for Docker daemon..."
-timeout=30
-while ! docker info >/dev/null 2>&1; do
-    sleep 1
-    timeout=$((timeout - 1))
-    if [ $timeout -eq 0 ]; then
-        echo "Docker daemon failed to start"
-        exit 1
+# Setup user with host UID/GID if running as root
+if [ "$(id -u)" = "0" ]; then
+    # Use environment variables for UID/GID if provided, fallback to defaults
+    USER_ID=${HOST_UID:-1000}
+    GROUP_ID=${HOST_GID:-1000}
+    
+    # Update developer user with host UID/GID
+    groupmod -g $GROUP_ID developer 2>/dev/null || true
+    usermod -u $USER_ID -g $GROUP_ID developer 2>/dev/null || true
+    
+    # Fix ownership of home directory
+    chown -R $USER_ID:$GROUP_ID /home/developer
+    
+    # Setup Claude Code authentication using the refresh script
+    /usr/local/bin/refresh-claude-auth.sh || echo "   (This is normal if Claude Code isn't configured on the host)"
+    
+    # Ensure SSH directory has correct permissions if mounted
+    if [ -d "/home/developer/.ssh" ]; then
+        echo "Setting up SSH permissions..."
+        chown -R $USER_ID:$GROUP_ID /home/developer/.ssh
+        chmod 700 /home/developer/.ssh
+        chmod 600 /home/developer/.ssh/* 2>/dev/null || true
+        echo "✅ SSH permissions configured"
     fi
-done
+    
+    # Start docker daemon in background
+    dockerd &
+    
+    # Wait for docker to be ready
+    echo "Waiting for Docker daemon..."
+    timeout=30
+    while ! docker info >/dev/null 2>&1; do
+        sleep 1
+        timeout=$((timeout - 1))
+        if [ $timeout -eq 0 ]; then
+            echo "Docker daemon failed to start"
+            exit 1
+        fi
+    done
+    
+    echo "Docker daemon ready"
+    
+    # Switch to developer user for the rest of the script
+    exec su developer "$0" "$@"
+fi
 
-echo "Docker daemon ready"
+# Now running as developer user
 
 # Find the repository directory (should be only subdirectory in /workspace)
 REPO_DIR=$(find /workspace -maxdepth 1 -type d ! -path /workspace | head -1)

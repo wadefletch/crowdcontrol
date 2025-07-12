@@ -10,4 +10,4 @@ pub use config::Config;
 pub use docker::{Agent, AgentStatus, DockerClient};
 pub use logger::init_logger;
 pub use settings::Settings;
-pub use state_validator::{StateValidator, StateInconsistency};
+pub use state_validator::{StateInconsistency, StateValidator};

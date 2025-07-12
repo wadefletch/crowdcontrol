@@ -28,8 +28,25 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
     // Clone repository
     let repo_target = workspace_path.join(&args.name);
     let pb = create_progress_bar("Cloning repository...");
-    clone_repository(&args.repository, &repo_target, args.branch.as_deref())?;
+
+    // Wrap clone operation in a closure that handles cleanup on failure
+    let clone_result =
+        (|| clone_repository(&args.repository, &repo_target, args.branch.as_deref()))();
+
     pb.finish_and_clear();
+
+    // If clone failed, cleanup workspace directory and return the error
+    if let Err(e) = clone_result {
+        // Cleanup the workspace directory we created
+        if let Err(cleanup_err) = fs::remove_dir_all(&workspace_path) {
+            eprintln!(
+                "Warning: Failed to cleanup workspace directory after clone failure: {}",
+                cleanup_err
+            );
+        }
+        return Err(e);
+    }
+
     print_success("Repository cloned successfully");
 
     // Verify repository setup if not skipped

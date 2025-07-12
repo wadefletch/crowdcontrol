@@ -1,5 +1,5 @@
-use crowdcontrol_core::{agent::*, Config, Agent, AgentStatus};
 use chrono::Utc;
+use crowdcontrol_core::{agent::*, Agent, AgentStatus, Config};
 use std::path::PathBuf;
 use std::sync::{Arc, Barrier};
 use std::thread;
@@ -55,10 +55,11 @@ fn test_metadata_has_comment() {
     save_agent_metadata(&config, &agent).unwrap();
 
     // Read the raw JSON to verify comment field
-    let metadata_path = config.agent_workspace_path("test-agent")
+    let metadata_path = config
+        .agent_workspace_path("test-agent")
         .join(".crowdcontrol")
         .join("metadata.json");
-    
+
     let content = std::fs::read_to_string(metadata_path).unwrap();
     assert!(content.contains("\"_comment\":"));
     assert!(content.contains("auto-generated"));
@@ -68,7 +69,7 @@ fn test_metadata_has_comment() {
 fn test_concurrent_reads() {
     let (config, _temp_dir) = create_test_config();
     let agent = create_test_agent("concurrent-read-test");
-    
+
     // Save initial metadata
     save_agent_metadata(&config, &agent).unwrap();
 
@@ -80,19 +81,19 @@ fn test_concurrent_reads() {
     for i in 0..5 {
         let config = Arc::clone(&config);
         let barrier = Arc::clone(&barrier);
-        
+
         let handle = thread::spawn(move || {
             barrier.wait();
-            
+
             // All threads try to read at the same time
             let result = load_agent_metadata(&config, "concurrent-read-test");
-            
+
             // Verify the read was successful
             let agent = result.expect(&format!("Thread {} failed to read", i));
             assert_eq!(agent.name, "concurrent-read-test");
             assert_eq!(agent.repository, "https://github.com/test/repo.git");
         });
-        
+
         handles.push(handle);
     }
 
@@ -113,7 +114,7 @@ fn test_concurrent_writes_are_serialized() {
     for i in 0..3 {
         let config = Arc::clone(&config);
         let barrier = Arc::clone(&barrier);
-        
+
         let handle = thread::spawn(move || {
             let agent = Agent {
                 name: format!("write-test-{}", i),
@@ -124,13 +125,13 @@ fn test_concurrent_writes_are_serialized() {
                 created_at: Utc::now(),
                 workspace_path: PathBuf::from(format!("/test/workspace{}", i)),
             };
-            
+
             barrier.wait();
-            
+
             // All threads try to write at the same time
             save_agent_metadata(&config, &agent).unwrap();
         });
-        
+
         handles.push(handle);
     }
 
@@ -142,7 +143,10 @@ fn test_concurrent_writes_are_serialized() {
     // Verify all agents were saved correctly
     for i in 0..3 {
         let agent = load_agent_metadata(&config, &format!("write-test-{}", i)).unwrap();
-        assert_eq!(agent.repository, format!("https://github.com/test/repo{}.git", i));
+        assert_eq!(
+            agent.repository,
+            format!("https://github.com/test/repo{}.git", i)
+        );
         assert_eq!(agent.container_id, Some(format!("container-{}", i)));
     }
 }
@@ -151,7 +155,7 @@ fn test_concurrent_writes_are_serialized() {
 fn test_atomic_update() {
     let (config, _temp_dir) = create_test_config();
     let agent = create_test_agent("update-test");
-    
+
     // Save initial metadata
     save_agent_metadata(&config, &agent).unwrap();
 
@@ -160,18 +164,22 @@ fn test_atomic_update() {
         agent.container_id = Some("new-container-id".to_string());
         agent.status = AgentStatus::Running;
         Ok(())
-    }).unwrap();
+    })
+    .unwrap();
 
     // Verify the update
     let updated_agent = load_agent_metadata(&config, "update-test").unwrap();
-    assert_eq!(updated_agent.container_id, Some("new-container-id".to_string()));
+    assert_eq!(
+        updated_agent.container_id,
+        Some("new-container-id".to_string())
+    );
 }
 
 #[test]
 fn test_concurrent_updates() {
     let (config, _temp_dir) = create_test_config();
     let agent = create_test_agent("concurrent-update-test");
-    
+
     // Save initial metadata
     save_agent_metadata(&config, &agent).unwrap();
 
@@ -183,17 +191,18 @@ fn test_concurrent_updates() {
     for i in 0..5 {
         let config = Arc::clone(&config);
         let barrier = Arc::clone(&barrier);
-        
+
         let handle = thread::spawn(move || {
             barrier.wait();
-            
+
             // Each thread tries to update the container_id
             update_agent_metadata(&config, "concurrent-update-test", |agent| {
                 agent.container_id = Some(format!("container-from-thread-{}", i));
                 Ok(())
-            }).unwrap();
+            })
+            .unwrap();
         });
-        
+
         handles.push(handle);
     }
 
@@ -205,19 +214,22 @@ fn test_concurrent_updates() {
     // Verify that one of the updates succeeded and the data is consistent
     let final_agent = load_agent_metadata(&config, "concurrent-update-test").unwrap();
     assert!(final_agent.container_id.is_some());
-    assert!(final_agent.container_id.unwrap().starts_with("container-from-thread-"));
+    assert!(final_agent
+        .container_id
+        .unwrap()
+        .starts_with("container-from-thread-"));
 }
 
 #[test]
 fn test_update_nonexistent_agent() {
     let (config, _temp_dir) = create_test_config();
-    
+
     // Try to update a non-existent agent
     let result = update_agent_metadata(&config, "nonexistent", |agent| {
         agent.container_id = Some("should-not-work".to_string());
         Ok(())
     });
-    
+
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("not found"));
 }
@@ -225,16 +237,16 @@ fn test_update_nonexistent_agent() {
 #[test]
 fn test_list_all_agents() {
     let (config, _temp_dir) = create_test_config();
-    
+
     // Create multiple agents
     for i in 0..3 {
         let agent = create_test_agent(&format!("list-test-{}", i));
         save_agent_metadata(&config, &agent).unwrap();
     }
-    
+
     // List all agents
     let agents = list_all_agents(&config).unwrap();
-    
+
     assert_eq!(agents.len(), 3);
     assert!(agents.contains(&"list-test-0".to_string()));
     assert!(agents.contains(&"list-test-1".to_string()));
@@ -245,7 +257,7 @@ fn test_list_all_agents() {
 fn test_mixed_concurrent_operations() {
     let (config, _temp_dir) = create_test_config();
     let agent = create_test_agent("mixed-ops-test");
-    
+
     // Save initial metadata
     save_agent_metadata(&config, &agent).unwrap();
 
@@ -257,12 +269,12 @@ fn test_mixed_concurrent_operations() {
     for i in 0..10 {
         let config = Arc::clone(&config);
         let barrier = Arc::clone(&barrier);
-        
+
         let handle = if i % 2 == 0 {
             // Reader thread
             thread::spawn(move || {
                 barrier.wait();
-                
+
                 let agent = load_agent_metadata(&config, "mixed-ops-test").unwrap();
                 assert_eq!(agent.name, "mixed-ops-test");
             })
@@ -270,14 +282,15 @@ fn test_mixed_concurrent_operations() {
             // Writer thread
             thread::spawn(move || {
                 barrier.wait();
-                
+
                 update_agent_metadata(&config, "mixed-ops-test", |agent| {
                     agent.container_id = Some(format!("updated-by-thread-{}", i));
                     Ok(())
-                }).unwrap();
+                })
+                .unwrap();
             })
         };
-        
+
         handles.push(handle);
     }
 
@@ -285,7 +298,7 @@ fn test_mixed_concurrent_operations() {
     for handle in handles {
         handle.join().unwrap();
     }
-    
+
     // Verify final state is consistent
     let final_agent = load_agent_metadata(&config, "mixed-ops-test").unwrap();
     assert!(final_agent.container_id.is_some());

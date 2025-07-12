@@ -57,7 +57,10 @@ fn ensure_docker_image_built() {
             println!("Building crowdcontrol:latest image...");
 
             let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-            let container_dir = PathBuf::from(manifest_dir).parent().unwrap().join("container");
+            let container_dir = PathBuf::from(manifest_dir)
+                .parent()
+                .unwrap()
+                .join("container");
 
             let output = StdCommand::new("docker")
                 .args(&["build", "-t", "crowdcontrol:latest", "."])
