@@ -180,18 +180,33 @@ impl DockerClient {
             });
         }
 
-        // Mount Claude config if it exists - simple persistent mount
+        // Mount Claude config - both new and legacy formats
         let home_dir = dirs::home_dir().unwrap();
+        
+        // Mount .claude directory if it exists
         let claude_dir = home_dir.join(".claude");
         if claude_dir.exists() {
             mounts.push(Mount {
-                target: Some("/mnt/claude-config".to_string()),
+                target: Some("/mnt/claude-config/.claude".to_string()),
                 source: Some(claude_dir.to_string_lossy().to_string()),
                 typ: Some(MountTypeEnum::BIND),
                 read_only: Some(true),
                 ..Default::default()
             });
         }
+        
+        // Mount legacy .claude.json if it exists
+        let claude_legacy = home_dir.join(".claude.json");
+        if claude_legacy.exists() {
+            mounts.push(Mount {
+                target: Some("/mnt/claude-config/.claude.json".to_string()),
+                source: Some(claude_legacy.to_string_lossy().to_string()),
+                typ: Some(MountTypeEnum::BIND),
+                read_only: Some(true),
+                ..Default::default()
+            });
+        }
+        
 
         let mut host_config = HostConfig {
             privileged: Some(true),

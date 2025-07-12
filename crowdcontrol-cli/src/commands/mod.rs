@@ -173,6 +173,10 @@ pub struct RefreshArgs {
     /// Name of the agent to refresh Claude Code authentication for
     #[arg(help = "Name of the agent to refresh Claude Code authentication for")]
     pub name: String,
+    
+    /// Extract credentials from macOS keychain
+    #[arg(long, help = "Extract Claude Code credentials from macOS keychain (macOS only)")]
+    pub extract_keychain: bool,
 }
 
 /// Output format options
