@@ -40,9 +40,9 @@ if [ -f "/mnt/claude-config/.claude.json" ]; then
     echo "Copying .claude.json from mount (legacy format)..."
     cp /mnt/claude-config/.claude.json /home/developer/.claude.json
     
-    # Apply jq transformations: disable autoUpdates, reset projects, set mode to global
+    # Apply jq transformations: disable autoUpdates, reset projects, set mode to global, enable headless mode
     echo "Applying transformations to .claude.json..."
-    jq '.autoUpdates = false | .projects = {} | .mode = "global"' /home/developer/.claude.json > /home/developer/.claude.json.tmp
+    jq '.autoUpdates = false | .projects = {} | .mode = "global" | .bypassPermissionsModeAccepted = true' /home/developer/.claude.json > /home/developer/.claude.json.tmp
     mv /home/developer/.claude.json.tmp /home/developer/.claude.json
     
     chown $USER_ID:$GROUP_ID /home/developer/.claude.json
@@ -52,6 +52,13 @@ if [ -f "/mnt/claude-config/.claude.json" ]; then
 fi
 
 echo "⚠️  No Claude Code credentials found"
-echo "   Expected: ~/.claude/credentials.json, ~/.claude.json, or keychain credentials"
-echo "   On macOS, run: crowdcontrol refresh <agent-name> --extract-keychain"
-exit 1
+echo "   Expected: ~/.claude/.credentials.json, ~/.claude.json, or keychain credentials"
+echo "   "
+echo "   To authenticate Claude Code in the container:"
+echo "   1. On macOS: crowdcontrol refresh <agent-name> --extract-keychain"
+echo "   2. On Linux: Ensure ~/.claude/.credentials.json exists on host"
+echo "   3. Or run 'claude login' inside the container manually"
+echo "   "
+echo "   Note: CLAUDE_CONFIG_DIR is set to: ${CLAUDE_CONFIG_DIR:-/home/developer}"
+# Don't exit with error - allow container to continue
+exit 0
