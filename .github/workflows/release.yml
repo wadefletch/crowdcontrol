@@ -111,8 +111,7 @@ jobs:
     
     - name: Publish cargo
       run: |
-        cargo publish -p crowdcontrol-core --token ${{ secrets.CARGO_REGISTRY_TOKEN }} || true
-        sleep 10
+        # Only publish the CLI crate to crates.io as "crowdcontrol"
         cargo publish -p crowdcontrol-cli --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
     
     - uses: actions/setup-node@v4
