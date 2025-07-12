@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use bollard::container::{
-    Config as ContainerConfig, CreateContainerOptions, ListContainersOptions, LogsOptions,
+    Config as ContainerConfig, CreateContainerOptions, InspectContainerOptions, ListContainersOptions, LogsOptions,
     RemoveContainerOptions, StartContainerOptions, StopContainerOptions,
 };
 use bollard::exec::{CreateExecOptions, StartExecResults};
@@ -34,6 +34,26 @@ pub enum AgentStatus {
     Running,
     Stopped,
     Error,
+}
+
+impl Agent {
+    /// Compute the current live status from Docker.
+    /// This is the single source of truth for agent status.
+    pub async fn compute_live_status(&self, docker: &DockerClient) -> Result<AgentStatus> {
+        match &self.container_id {
+            None => Ok(AgentStatus::Created),
+            Some(container_id) => {
+                // First validate the container ID is still valid for this agent
+                if !docker.validate_container_id(&self.name, container_id).await? {
+                    // Container ID is stale, agent is effectively Created
+                    return Ok(AgentStatus::Created);
+                }
+                
+                // Get live status from Docker
+                docker.get_container_status(&self.name).await
+            }
+        }
+    }
 }
 
 pub struct DockerClient {
@@ -458,6 +478,29 @@ impl DockerClient {
         println!();
 
         Ok(())
+    }
+
+    /// Validate that a container ID actually belongs to the specified agent
+    pub async fn validate_container_id(&self, agent_name: &str, container_id: &str) -> Result<bool> {
+        let expected_container_name = format!("crowdcontrol-{}", agent_name);
+        
+        // Get container details
+        match self.docker.inspect_container(container_id, None::<InspectContainerOptions>).await {
+            Ok(container) => {
+                // Check if container name matches expected agent name
+                if let Some(name) = container.name {
+                    // Docker container names start with "/"
+                    let clean_name = name.strip_prefix('/').unwrap_or(&name);
+                    Ok(clean_name == expected_container_name)
+                } else {
+                    Ok(false)
+                }
+            }
+            Err(_) => {
+                // Container doesn't exist or can't be inspected
+                Ok(false)
+            }
+        }
     }
 }
 

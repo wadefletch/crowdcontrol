@@ -304,3 +304,28 @@ pub fn format_duration(created_at: DateTime<Utc>) -> String {
         "just now".to_string()
     }
 }
+
+/// Auto-repair function to clear stale container IDs from agent metadata
+pub async fn auto_repair_stale_container_id(config: &Config, agent_name: &str) -> Result<()> {
+    use crate::DockerClient;
+    
+    // Load current agent metadata
+    let agent = load_agent_metadata(config, agent_name)?;
+    
+    if let Some(container_id) = &agent.container_id {
+        // Create Docker client to validate container ID
+        let docker = DockerClient::new(config.clone())?;
+        
+        // Check if container ID is still valid
+        if !docker.validate_container_id(agent_name, container_id).await? {
+            // Container ID is stale, clear it
+            update_agent_metadata(config, agent_name, |agent| {
+                debug!("Auto-repairing stale container ID for agent '{}'", agent_name);
+                agent.container_id = None;
+                Ok(())
+            })?;
+        }
+    }
+    
+    Ok(())
+}
