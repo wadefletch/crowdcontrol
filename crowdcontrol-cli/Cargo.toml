@@ -4,7 +4,13 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "CLI for CrowdControl container management"
+description = "Command-line interface for CrowdControl containerized development environments"
+homepage = "https://github.com/wadefletch/crowdcontrol"
+repository = "https://github.com/wadefletch/crowdcontrol"
+keywords = ["docker", "development", "containers", "claude", "ai"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "../README.md"
+exclude = ["tests/fixtures/"]
 
 [[bin]]
 name = "crowdcontrol"

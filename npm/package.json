@@ -1,0 +1,37 @@
+{
+  "name": "@wadefletch/crowdcontrol",
+  "version": "0.1.0",
+  "description": "Containerized development environments with Claude Code integration",
+  "keywords": ["docker", "development", "containers", "claude", "ai", "rust", "cli"],
+  "homepage": "https://github.com/wadefletch/crowdcontrol",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wadefletch/crowdcontrol.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wadefletch/crowdcontrol/issues"
+  },
+  "author": "Wade Fletcher <wade@tractorbeam.ai>",
+  "license": "MIT",
+  "bin": {
+    "crowdcontrol": "./bin/crowdcontrol"
+  },
+  "files": [
+    "bin/",
+    "install.js",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node install.js",
+    "preuninstall": "node uninstall.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "os": ["darwin", "linux", "win32"],
+  "cpu": ["x64", "arm64"],
+  "preferGlobal": true,
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,32 @@
+[changelog]
+path = "CHANGELOG.md"
+template = "remote"
+remote = "github.com"
+repository = "crowdcontrol"
+owner = "wadefletch"
+
+[bump]
+# Only allow releases from main branch
+branch_whitelist = ["main"]
+
+pre_bump_hooks = [
+    "cargo check --workspace",
+    "cargo test",
+]
+
+post_bump_hooks = [
+    "git push",
+    "git push origin {{version}}",
+]
+
+# Auto-bump is the default behavior - calculate version from commits
+
+[commit_types]
+feat = { changelog_title = "Features" }
+fix = { changelog_title = "Bug Fixes" }
+docs = { changelog_title = "Documentation" }
+chore = { changelog_title = "Miscellaneous" }
+refactor = { changelog_title = "Refactoring" }
+perf = { changelog_title = "Performance" }
+test = { changelog_title = "Testing" }
+ci = { changelog_title = "CI/CD" }

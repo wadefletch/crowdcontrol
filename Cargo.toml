@@ -2,6 +2,13 @@
 members = ["crowdcontrol-core", "crowdcontrol-cli"]
 resolver = "2"
 
+# Optimized release profile
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"

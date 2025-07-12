@@ -28,17 +28,65 @@ This architecture allows for easy extension with additional interfaces (e.g., HT
 
 ## Installation
 
+### Option 1: npm/pnpm (Cross-platform)
+
+```bash
+# Install globally via npm
+npm install -g @wadefletch/crowdcontrol
+
+# Or with pnpm
+pnpm install -g @wadefletch/crowdcontrol
+
+# Pull the Docker image
+docker pull crowdcontrol/crowdcontrol:latest
+
+# Verify installation
+crowdcontrol --help
+```
+
+### Option 2: Cargo (Rust developers)
+
+```bash
+# Install via Cargo
+cargo install crowdcontrol-cli
+
+# Pull the Docker image
+docker pull crowdcontrol/crowdcontrol:latest
+
+# Verify installation
+crowdcontrol --help
+```
+
+### Option 3: Download Pre-built Binaries
+
+Download the latest release for your platform from the [releases page](https://github.com/wadefletch/crowdcontrol/releases).
+
+```bash
+# Example for macOS (replace with your platform)
+curl -L -o crowdcontrol.tar.gz https://github.com/wadefletch/crowdcontrol/releases/latest/download/crowdcontrol-aarch64-apple-darwin.tar.gz
+tar -xzf crowdcontrol.tar.gz
+sudo mv crowdcontrol /usr/local/bin/
+
+# Pull the Docker image
+docker pull crowdcontrol/crowdcontrol:latest
+
+# Verify installation
+crowdcontrol --help
+```
+
+### Option 4: Build from Source
+
 1. **Clone the repository**:
 
    ```bash
-   git clone git@github.com:yourorg/crowdcontrol.git
+   git clone git@github.com:wadefletch/crowdcontrol.git
    cd crowdcontrol
    ```
 
-2. **Build the Docker image**:
+2. **Build the Docker image** (if you want to customize):
 
    ```bash
-   docker build -t crowdcontrol:latest ./crowdcontrol-core/container/
+   docker build -t crowdcontrol:latest ./container/
    ```
 
 3. **Build and install the CLI**:
@@ -54,18 +102,18 @@ This architecture allows for easy extension with additional interfaces (e.g., HT
    crowdcontrol --help
    ```
 
-5. **Set up shell completions** (optional):
+### Shell Completions (Optional)
 
-   ```bash
-   # For bash
-   crowdcontrol completions bash > /etc/bash_completion.d/crowdcontrol
+```bash
+# For bash
+crowdcontrol completions bash > /etc/bash_completion.d/crowdcontrol
 
-   # For zsh
-   crowdcontrol completions zsh > ~/.zsh/completions/_crowdcontrol
+# For zsh
+crowdcontrol completions zsh > ~/.zsh/completions/_crowdcontrol
 
-   # For fish
-   crowdcontrol completions fish > ~/.config/fish/completions/crowdcontrol.fish
-   ```
+# For fish
+crowdcontrol completions fish > ~/.config/fish/completions/crowdcontrol.fish
+```
 
 ## Usage
 
@@ -198,14 +246,26 @@ echo "Services ready"
 
 ## Development
 
-### Building from source
+### Setting up the Development Environment
 
 ```bash
-# Build in debug mode
+git clone git@github.com:wadefletch/crowdcontrol.git
+cd crowdcontrol
 cargo build
+```
 
-# Build optimized binary
-cargo build --release
+### Development Workflow
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation. Supported scopes: `core`, `cli`, `ci`.
+
+#### Making Commits
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```bash
+git commit -m "feat(core): add agent status monitoring"
+git commit -m "fix(cli): resolve container startup timeout"
+git commit -m "docs: update installation instructions"
 ```
 
 ### Testing
@@ -235,24 +295,31 @@ cargo test -- --ignored --test-threads=1
 - `cargo test-integration` - Run only Docker integration tests
 - `cargo test-docker` - Run all Docker-dependent tests
 
+### Releases
+
+Releases are automated using [Cocogitto](https://docs.cocogitto.io/):
+
+1. **Conventional commits** on `main` trigger automatic version bumping
+2. **Cocogitto** generates changelog and creates GitHub releases  
+3. **GitHub Actions** build and publish to:
+   - Cargo (crates.io)
+   - npm (@wadefletch/crowdcontrol)
+   - GitHub releases (cross-platform binaries)
+
+Releases happen automatically when conventional commits are pushed to `main`.
+
 ### Project Structure
 
 ```
 crowdcontrol/
 ├── crowdcontrol-core/       # Core library crate
-│   └── src/
-│       ├── lib.rs           # Library exports
-│       ├── config.rs        # Configuration management
-│       ├── docker.rs        # Docker API operations
-│       └── agent.rs         # Agent management utilities
-│   └── container/
-│       ├── Dockerfile       # Container image definition
-│       └── entrypoint.sh    # Container entrypoint script
-├── crowdcontrol-cli/        # CLI crate
-│   └── src/
-│       ├── main.rs          # CLI entry point
-│       ├── commands/        # Command implementations
-│       └── utils.rs         # CLI utilities
+├── crowdcontrol-cli/        # CLI crate  
+├── container/               # Docker container definition
+├── npm/                     # npm package distribution
+├── .github/workflows/       # CI/CD workflows
+├── .cargo/config.toml       # Cargo aliases
+├── cog.toml                 # Cocogitto configuration
+├── install.sh               # Installation script
 └── Cargo.toml               # Workspace configuration
 ```
 
