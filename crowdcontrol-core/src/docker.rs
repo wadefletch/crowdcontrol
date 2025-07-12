@@ -180,25 +180,13 @@ impl DockerClient {
             });
         }
 
-        // Always mount Claude config directory if it exists - simple persistent mount
+        // Mount Claude config if it exists - simple persistent mount
         let home_dir = dirs::home_dir().unwrap();
         let claude_dir = home_dir.join(".claude");
         if claude_dir.exists() {
             mounts.push(Mount {
-                target: Some("/mnt/host-claude-config/.claude".to_string()),
+                target: Some("/mnt/claude-config".to_string()),
                 source: Some(claude_dir.to_string_lossy().to_string()),
-                typ: Some(MountTypeEnum::BIND),
-                read_only: Some(true),
-                ..Default::default()
-            });
-        }
-
-        // Also mount legacy .claude.json if it exists
-        let claude_legacy = home_dir.join(".claude.json");
-        if claude_legacy.exists() {
-            mounts.push(Mount {
-                target: Some("/mnt/host-claude-config/.claude.json".to_string()),
-                source: Some(claude_legacy.to_string_lossy().to_string()),
                 typ: Some(MountTypeEnum::BIND),
                 read_only: Some(true),
                 ..Default::default()
@@ -227,6 +215,9 @@ impl DockerClient {
         let user_id = unsafe { libc::getuid() };
         let group_id = unsafe { libc::getgid() };
 
+        let mut labels = HashMap::new();
+        labels.insert("app".to_string(), "crowdcontrol".to_string());
+        
         let container_config = ContainerConfig {
             image: Some(self.config.image.clone()),
             host_config: Some(host_config),
@@ -234,6 +225,7 @@ impl DockerClient {
                 format!("HOST_UID={}", user_id),
                 format!("HOST_GID={}", group_id),
             ]),
+            labels: Some(labels),
             ..Default::default()
         };
 

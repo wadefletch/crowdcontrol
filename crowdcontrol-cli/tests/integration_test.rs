@@ -327,6 +327,80 @@ fn test_resource_limits() {
 }
 
 #[test]
+#[ignore = "requires Docker and should be run with --ignored"]
+fn test_agent_start_and_connect_issue() {
+    ensure_docker_image_built();
+    
+    // This test reproduces the issue where agent starts but shows as not running
+    let test_agent_name = format!(
+        "test-issue-{}",
+        uuid::Uuid::new_v4().to_string()[0..8].to_string()
+    );
+    
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+    let fixture_path = PathBuf::from(manifest_dir).join("tests/fixtures/nodejs-test-repo");
+    
+    // Ensure fixture exists
+    assert!(
+        fixture_path.exists(),
+        "Test fixture not found at {:?}",
+        fixture_path
+    );
+    
+    // Clean up any existing test agent
+    cleanup_agent(&test_agent_name);
+    
+    let repo_url = format!("file://{}", fixture_path.display());
+    
+    // Create agent
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("new")
+        .arg(&test_agent_name)
+        .arg(&repo_url)
+        .timeout(Duration::from_secs(30))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("setup complete!"));
+    
+    // Start agent
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("start")
+        .arg(&test_agent_name)
+        .timeout(Duration::from_secs(60))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("started successfully"));
+    
+    // Give container time to fail if it's going to
+    std::thread::sleep(Duration::from_secs(5));
+    
+    // Check container logs to debug any startup issues
+    let output = StdCommand::new("docker")
+        .args(&["logs", &format!("crowdcontrol-{}", test_agent_name)])
+        .output()
+        .expect("Failed to get container logs");
+    
+    if !output.status.success() || !String::from_utf8_lossy(&output.stderr).is_empty() {
+        println!("Container logs (stdout):\n{}", String::from_utf8_lossy(&output.stdout));
+        println!("Container logs (stderr):\n{}", String::from_utf8_lossy(&output.stderr));
+    }
+    
+    // Try to connect - this should work if the container is actually running
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("connect")
+        .arg(&test_agent_name)
+        .arg("--command")
+        .arg("echo 'test'")
+        .arg("--detach")
+        .timeout(Duration::from_secs(10))
+        .assert()
+        .success();
+    
+    // Clean up
+    cleanup_agent(&test_agent_name);
+}
+
+#[test]
 fn test_json_output_format() {
     let mut cmd = crowdcontrol_cmd();
     cmd.arg("list")
@@ -338,6 +412,146 @@ fn test_json_output_format() {
         .success()
         .stdout(predicate::str::starts_with("["))
         .stdout(predicate::str::ends_with("]\n"));
+}
+
+#[test]
+#[ignore = "requires Docker and should be run with --ignored"]
+fn test_refresh_claude_credentials() {
+    ensure_docker_image_built();
+    
+    let test_agent_name = format!(
+        "test-refresh-{}",
+        uuid::Uuid::new_v4().to_string()[0..8].to_string()
+    );
+    
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+    let fixture_path = PathBuf::from(manifest_dir).join("tests/fixtures/nodejs-test-repo");
+    
+    // Clean up any existing test agent
+    cleanup_agent(&test_agent_name);
+    
+    let repo_url = format!("file://{}", fixture_path.display());
+    
+    // Create agent
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("new")
+        .arg(&test_agent_name)
+        .arg(&repo_url)
+        .timeout(Duration::from_secs(30))
+        .assert()
+        .success();
+    
+    // Start agent
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("start")
+        .arg(&test_agent_name)
+        .timeout(Duration::from_secs(60))
+        .assert()
+        .success();
+    
+    // Give container time to initialize
+    std::thread::sleep(Duration::from_secs(5));
+    
+    // Test refresh command when Claude credentials don't exist
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("refresh")
+        .arg(&test_agent_name)
+        .timeout(Duration::from_secs(10))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("authentication refreshed successfully"));
+    
+    // Create a mock Claude credentials file
+    let home_dir = dirs::home_dir().unwrap();
+    let claude_dir = home_dir.join(".claude");
+    let credentials_backup = claude_dir.join("credentials.json.backup");
+    let credentials_path = claude_dir.join("credentials.json");
+    
+    // Backup existing credentials if they exist
+    let had_credentials = if credentials_path.exists() {
+        fs::rename(&credentials_path, &credentials_backup).ok();
+        true
+    } else {
+        fs::create_dir_all(&claude_dir).ok();
+        false
+    };
+    
+    // Create mock credentials
+    fs::write(&credentials_path, r#"{"token": "test-token-12345"}"#)
+        .expect("Failed to create mock credentials");
+    
+    // Test refresh with credentials present
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("refresh")
+        .arg(&test_agent_name)
+        .timeout(Duration::from_secs(10))
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("authentication refreshed successfully"));
+    
+    // Verify credentials were copied into container
+    let output = StdCommand::new("docker")
+        .args(&[
+            "exec",
+            &format!("crowdcontrol-{}", test_agent_name),
+            "cat",
+            "/home/developer/.claude/credentials.json"
+        ])
+        .output()
+        .expect("Failed to check credentials in container");
+    
+    let container_creds = String::from_utf8_lossy(&output.stdout);
+    assert!(container_creds.contains("test-token-12345"), "Credentials not found in container");
+    
+    // Clean up mock credentials
+    fs::remove_file(&credentials_path).ok();
+    
+    // Restore original credentials if they existed
+    if had_credentials {
+        fs::rename(&credentials_backup, &credentials_path).ok();
+    }
+    
+    // Clean up
+    cleanup_agent(&test_agent_name);
+}
+
+#[test]
+#[ignore = "requires Docker and should be run with --ignored"]
+fn test_refresh_command_requires_running_agent() {
+    ensure_docker_image_built();
+    
+    let test_agent_name = format!(
+        "test-refresh-stopped-{}",
+        uuid::Uuid::new_v4().to_string()[0..8].to_string()
+    );
+    
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+    let fixture_path = PathBuf::from(manifest_dir).join("tests/fixtures/nodejs-test-repo");
+    let repo_url = format!("file://{}", fixture_path.display());
+    
+    // Clean up any existing test agent
+    cleanup_agent(&test_agent_name);
+    
+    // Create agent but don't start it
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("new")
+        .arg(&test_agent_name)
+        .arg(&repo_url)
+        .timeout(Duration::from_secs(30))
+        .assert()
+        .success();
+    
+    // Try to refresh - should fail
+    let mut cmd = crowdcontrol_cmd();
+    cmd.arg("refresh")
+        .arg(&test_agent_name)
+        .timeout(Duration::from_secs(10))
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("must be running"));
+    
+    // Clean up
+    cleanup_agent(&test_agent_name);
 }
 
 fn cleanup_agent(name: &str) {

@@ -15,19 +15,28 @@ if [ "$(id -u)" = "0" ]; then
     groupmod -g $GROUP_ID developer 2>/dev/null || true
     usermod -u $USER_ID -g $GROUP_ID developer 2>/dev/null || true
     
-    # Fix ownership of home directory
-    chown -R $USER_ID:$GROUP_ID /home/developer
+    # Fix ownership of home directory, excluding mounted directories
+    # We need to be careful not to try to chown read-only mounts
+    find /home/developer -mindepth 1 -maxdepth 1 \
+        ! -name '.ssh' \
+        ! -name '.gitconfig' \
+        ! -name '.config' \
+        -exec chown -R $USER_ID:$GROUP_ID {} \; 2>/dev/null || true
+    
+    # Ensure home directory itself has correct ownership
+    chown $USER_ID:$GROUP_ID /home/developer
     
     # Setup Claude Code authentication using the refresh script
     /usr/local/bin/refresh-claude-auth.sh || echo "   (This is normal if Claude Code isn't configured on the host)"
     
-    # Ensure SSH directory has correct permissions if mounted
+    # SSH and git configs are mounted read-only, so we can't change permissions
+    # Just note their presence
     if [ -d "/home/developer/.ssh" ]; then
-        echo "Setting up SSH permissions..."
-        chown -R $USER_ID:$GROUP_ID /home/developer/.ssh
-        chmod 700 /home/developer/.ssh
-        chmod 600 /home/developer/.ssh/* 2>/dev/null || true
-        echo "✅ SSH permissions configured"
+        echo "✅ SSH configuration mounted (read-only)"
+    fi
+    
+    if [ -f "/home/developer/.gitconfig" ] || [ -d "/home/developer/.config/git" ]; then
+        echo "✅ Git configuration mounted (read-only)"
     fi
     
     # Start docker daemon in background

@@ -34,7 +34,11 @@ RUN groupadd -g ${GROUP_ID} developer && \
 # Copy and configure entrypoint and scripts
 COPY entrypoint.sh /entrypoint.sh
 COPY refresh-claude-auth.sh /usr/local/bin/refresh-claude-auth.sh
-RUN chmod +x /entrypoint.sh /usr/local/bin/refresh-claude-auth.sh
+COPY test-refresh-claude-auth.sh /usr/local/bin/test-refresh-claude-auth.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/refresh-claude-auth.sh /usr/local/bin/test-refresh-claude-auth.sh
+
+# Run tests during build to ensure scripts work
+RUN /usr/local/bin/test-refresh-claude-auth.sh
 
 # Set working directory
 WORKDIR /workspace
