@@ -249,7 +249,7 @@ impl DockerClient {
 
         let mut labels = HashMap::new();
         labels.insert("app".to_string(), "crowdcontrol".to_string());
-
+        
         // Prepare environment variables
         let mut env_vars = vec![
             format!("HOST_UID={}", user_id),
@@ -260,7 +260,7 @@ impl DockerClient {
         if let Some(github_config) = &self.config.github {
             env_vars.extend(github_config.to_container_env_vars());
         }
-
+        
         let container_config = ContainerConfig {
             image: Some(self.config.image.clone()),
             host_config: Some(host_config),
