@@ -16,6 +16,24 @@ pub struct GitHubConfig {
     pub cached_token: Option<CachedToken>,
 }
 
+/// Cached GitHub installation token with expiration tracking
+///
+/// ## Why Caching is Essential
+/// GitHub App installation tokens have a limited lifetime (typically 1 hour).
+/// Without caching, we would need to:
+/// - Generate a new JWT for every Git operation
+/// - Make API calls to GitHub for every repository access
+/// - Slow down all GitHub operations significantly
+///
+/// ## Security Considerations
+/// - Tokens are only cached in memory (not persisted to disk)
+/// - `#[serde(skip)]` prevents accidental serialization of sensitive tokens
+/// - Expired tokens are immediately discarded to prevent reuse
+///
+/// ## Thread Safety
+/// While the token itself is not thread-safe, the caching logic assumes
+/// single-threaded access per GitHubConfig instance. Multiple configs
+/// can safely cache tokens independently.
 #[derive(Debug, Clone)]
 pub struct CachedToken {
     pub token: String,
@@ -33,7 +51,9 @@ impl CachedToken {
     }
 
     pub fn expires_in(&self) -> Duration {
-        self.expires_at.duration_since(SystemTime::now()).unwrap_or(Duration::ZERO)
+        self.expires_at
+            .duration_since(SystemTime::now())
+            .unwrap_or(Duration::ZERO)
     }
 }
 
@@ -72,9 +92,7 @@ impl GitHubConfig {
         let installation_token = env::var("GITHUB_INSTALLATION_TOKEN").ok();
         let app_id = env::var("GITHUB_APP_ID").ok();
         let installation_id = env::var("GITHUB_INSTALLATION_ID").ok();
-        let private_key_path = env::var("GITHUB_PRIVATE_KEY_PATH")
-            .ok()
-            .map(PathBuf::from);
+        let private_key_path = env::var("GITHUB_PRIVATE_KEY_PATH").ok().map(PathBuf::from);
         let base_url = env::var("GITHUB_BASE_URL").ok();
 
         // Return Some if any GitHub config is present
@@ -95,7 +113,11 @@ impl GitHubConfig {
     /// Validate the GitHub configuration
     pub fn validate(&self) -> Result<()> {
         // Must have either installation token or app credentials
-        match (&self.installation_token, &self.app_id, &self.installation_id) {
+        match (
+            &self.installation_token,
+            &self.app_id,
+            &self.installation_id,
+        ) {
             (Some(token), _, _) => {
                 if token.is_empty() {
                     return Err(anyhow!("GitHub installation token cannot be empty"));
@@ -142,10 +164,40 @@ impl GitHubConfig {
 
     /// Get the effective GitHub base URL (defaults to github.com)
     pub fn github_base_url(&self) -> String {
-        self.base_url.clone().unwrap_or_else(|| "https://github.com".to_string())
+        self.base_url
+            .clone()
+            .unwrap_or_else(|| "https://github.com".to_string())
     }
 
-    /// Get an installation token, using cached token if available and not expired
+    /// Get a valid GitHub installation token, using cache when possible
+    ///
+    /// ## Token Hierarchy and Caching Strategy
+    /// GitHub authentication follows this precedence:
+    /// 1. **Cached Installation Token**: If unexpired, use immediately (fastest)
+    /// 2. **Direct Installation Token**: Long-lived token provided by user
+    /// 3. **JWT-Generated Token**: Generate from GitHub App credentials (TODO)
+    ///
+    /// ## Why Tokens Expire
+    /// GitHub App installation tokens expire for security reasons:
+    /// - **Limited blast radius**: If token is compromised, damage is time-limited
+    /// - **Audit trail**: GitHub can track token usage and detect anomalies
+    /// - **Revocation capability**: Apps can be uninstalled, immediately invalidating tokens
+    /// - **Compliance**: Helps meet security requirements for enterprise environments
+    ///
+    /// ## Performance Optimization
+    /// Without caching, each Git operation would require:
+    /// - JWT generation (cryptographic signing)
+    /// - HTTPS request to GitHub API
+    /// - Network latency and API rate limits
+    ///
+    /// Caching reduces this to a simple memory lookup for subsequent operations.
+    ///
+    /// ## Future JWT Implementation
+    /// When JWT support is added, this method will:
+    /// - Generate a signed JWT using the private key
+    /// - Exchange JWT for installation token via GitHub API
+    /// - Cache the result with proper expiration
+    /// - Handle token refresh automatically
     pub fn get_installation_token(&mut self) -> Result<String> {
         // Check if we have a cached token that's not expired
         if let Some(cached) = &self.cached_token {
@@ -214,15 +266,19 @@ impl GitHubConfig {
     pub fn get_git_config_commands(&self) -> Vec<String> {
         let base_url = self.github_base_url();
         let base_host = base_url.trim_start_matches("https://");
-        
+
         vec![
             // Configure git to use HTTPS instead of SSH (supports GitHub Enterprise)
-            format!("git config --global url.\"{}//\".insteadOf \"git@{}:\"", base_url, base_host),
+            format!(
+                "git config --global url.\"{}//\".insteadOf \"git@{}:\"",
+                base_url, base_host
+            ),
             // Set up credential helper
             "git config --global credential.helper store".to_string(),
             // Set CrowdControl as committer
             "git config --global user.name \"CrowdControl[bot]\"".to_string(),
-            "git config --global user.email \"crowdcontrol[bot]@users.noreply.github.com\"".to_string(),
+            "git config --global user.email \"crowdcontrol[bot]@users.noreply.github.com\""
+                .to_string(),
         ]
     }
 }
@@ -248,10 +304,13 @@ impl GitHubCredentialTemplate {
     ) -> Self {
         let base = base_url.unwrap_or_else(|| "https://github.com".to_string());
         let url_pattern = format!("{}/{}/*", base, organization);
-        
+
         Self {
             name: name.clone(),
-            description: Some(format!("GitHub App credentials for {} organization", organization)),
+            description: Some(format!(
+                "GitHub App credentials for {} organization",
+                organization
+            )),
             config,
             url_pattern,
         }
