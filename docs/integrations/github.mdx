@@ -1,0 +1,258 @@
+---
+title: "GitHub"
+description: "Integrate crowdcontrol seamlessly with GitHub for secure, efficient, and collaborative development."
+icon: "github"
+---
+
+When crowdcontrol uses a GitHub App for authentication, all commits and pull
+requests will show as being created by **crowdcontrol[bot]** instead of your
+personal GitHub account.
+
+## Prerequisites
+
+Before beginning the setup process, ensure you have the following:
+
+1. [crowdcontrol installed](/guides/getting-started) on your system
+2. A GitHub account with admin permissions for the repositories you want to integrate
+3. Access to create GitHub Apps (personal account or organization owner/admin permissions)
+
+## Setup
+
+<Steps>
+  <Step title="Create a GitHub App">
+    Navigate to GitHub App settings to create a new app:
+    - **For personal account**: GitHub → Settings → Developer settings → GitHub Apps
+    - **For organization**: Your organization → Settings → Developer settings → GitHub Apps
+
+    Click **New GitHub App** and configure the following:
+
+    **Basic Information:**
+    - **App name**: `crowdcontrol` (or `crowdcontrol-YourName` if taken)
+    - **Description**: `AI-powered development environment manager`
+    - **Homepage URL**: `https://github.com/wadefletch/crowdcontrol`
+    - **Webhook URL**: Leave blank (not needed)
+    - **Webhook secret**: Leave blank
+
+    **Repository Permissions:**
+    - **Contents**: Read and write (for cloning repos, creating branches, pushing code)
+    - **Pull requests**: Write (for creating pull requests)
+    - **Metadata**: Read (automatically selected, required for basic access)
+
+    **Installation Scope:** "Only on this account"
+
+    Click **Create GitHub App** to complete the setup.
+
+  </Step>
+
+  <Step title="Generate a Private Key">
+    After creating your GitHub App, you'll need to generate a private key for authentication. In your GitHub App settings, scroll down to the **Private keys** section and click **Generate a private key**. This will download a `.pem` file containing your app's RSA private key.
+
+    <Info>
+      **Why does crowdcontrol need a private key?**
+
+      GitHub Apps use JWT (JSON Web Token) authentication. The private key allows crowdcontrol to:
+      - **Generate tokens automatically** - No manual renewal needed (unlike installation tokens that expire hourly)
+      - **Authenticate persistently** - Containers can request fresh tokens whenever needed
+      - **Support team workflows** - Multiple developers can use the same app credentials
+      - **Maintain security** - Each container gets isolated credentials without exposing personal tokens
+
+      **Security Note**: The private key never enters your development containers. crowdcontrol uses it on the host to generate temporary tokens, then passes only those tokens to containers. This keeps your private key secure while allowing containers to authenticate with GitHub.
+    </Info>
+
+    Store this file securely on your system and set restrictive permissions:
+    ```bash
+    chmod 600 /path/to/crowdcontrol-private-key.pem
+    ```
+
+    <Warning>
+      This private key provides programmatic access to your repositories. Never share it publicly or commit it to version control. Treat it like a password.
+    </Warning>
+
+  </Step>
+
+  <Step title="Install the GitHub App">
+    With your GitHub App created and private key generated, install the app on your repositories:
+    
+    1. Click **Install App** from the left sidebar in your GitHub App settings
+    2. Choose the account/organization where you want to install it
+    3. Select repository access:
+       - **All repositories**: Gives crowdcontrol access to all your repos
+       - **Selected repositories**: Choose specific repos (recommended for testing)
+    4. Click **Install**
+
+  </Step>
+
+  <Step title="Get Your Installation ID">
+    After installation, you'll be redirected to a URL like:
+    ```
+    https://github.com/settings/installations/12345678
+    ```
+
+    The number at the end (`12345678`) is your **Installation ID**.
+
+    You can also find your Installation ID by:
+    1. Going to GitHub → Settings → Applications → Installed GitHub Apps
+    2. Click **Configure** next to your crowdcontrol app
+    3. The Installation ID is in the URL
+
+  </Step>
+
+  <Step title="Configure crowdcontrol">
+    You now have three pieces of information needed for crowdcontrol:
+    
+    1. **App ID**: Found near the top of your GitHub App's settings page (e.g., `123456`)
+    2. **Installation ID**: From Step 3 (e.g., `12345678`)
+    3. **Private Key file**: From Step 2 (the `.pem` file you downloaded)
+
+    ### Option A: Environment Variables (Recommended)
+
+    Set these environment variables in your shell:
+
+    ```bash
+    export GITHUB_APP_ID="123456"
+    export GITHUB_INSTALLATION_ID="12345678"
+    export GITHUB_PRIVATE_KEY_PATH="/path/to/your/crowdcontrol-private-key.pem"
+    ```
+
+    Add these to your shell profile (`.bashrc`, `.zshrc`, etc.) to make them permanent.
+
+    ### Option B: Installation Token (Simpler, but temporary)
+
+    Instead of App ID + private key, you can generate a direct installation token:
+
+    ```bash
+    # Install GitHub CLI and authenticate
+    gh auth login
+
+    # Generate an installation token
+    gh api /app/installations/YOUR_INSTALLATION_ID/access_tokens -X POST
+
+    # Use the token directly
+    export GITHUB_INSTALLATION_TOKEN="ghs_your_generated_token"
+    ```
+
+    <Warning>
+      Installation tokens expire after 1 hour, requiring manual renewal. This method is best for testing, not production use.
+    </Warning>
+
+  </Step>
+
+  <Step title="Test the Setup">
+    Verify your GitHub App authentication is working correctly:
+
+    1. Create a new crowdcontrol agent:
+       ```bash
+       crowdcontrol new test-github-auth https://github.com/yourusername/test-repo.git
+       ```
+
+    2. Connect to the agent and make a test commit:
+       ```bash
+       crowdcontrol connect test-github-auth
+       # Inside the container:
+       echo "Test commit from crowdcontrol" >> README.md
+       git add README.md
+       git commit -m "test: verify GitHub App authentication"
+       git push origin main
+       ```
+
+    3. Check GitHub - the commit should show as authored by "crowdcontrol[bot]"
+
+    <Tip>
+      **Expected output in GitHub:**
+      ```
+      crowdcontrol[bot] authored and committed 2 minutes ago
+      test: verify GitHub App authentication
+      ```
+    </Tip>
+
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="No GitHub configuration found error">
+    - Verify your environment variables are set correctly
+    - Run `env | grep GITHUB` to check current values  
+    - Restart your terminal after setting environment variables
+    - Ensure variable names match exactly (case-sensitive)
+  </Accordion>
+
+<Accordion title="Authentication failed error">
+  - Check that your Installation ID is correct (found in URL) - Verify the
+  private key file path and permissions: ```bash chmod 600 /path/to/key.pem ```
+  - Ensure the GitHub App is installed on the repository you're accessing -
+  Regenerate the private key if corrupted
+</Accordion>
+
+<Accordion title="App not appearing in commit history">
+  - Verify git user configuration inside the container: ```bash git config
+  user.name git config user.email ``` - Check that the installation token is
+  being used correctly - Ensure no personal access tokens are overriding the app
+  auth
+</Accordion>
+
+  <Accordion title="Permission denied errors">
+    - Review GitHub App permissions - ensure "Contents: Write" is enabled
+    - Check for branch protection rules blocking the app
+    - Verify the app is installed on the specific repository
+    - For organizations, check if app restrictions are in place
+  </Accordion>
+</AccordionGroup>
+
+## Organization Setup
+
+Organizations require additional planning to ensure secure, consistent deployment across team members. The recommended approach involves creating a centralized GitHub App under the organization account, which provides better control over permissions and easier management of access credentials.
+
+When setting up crowdcontrol for an organization, designate an admin to create the GitHub App under the organization's GitHub account rather than a personal account. This ensures the app remains accessible even if individual team members leave the organization. Install the app organization-wide or on specific repositories based on your security requirements and team structure.
+
+All team members should use identical environment variable configurations to ensure consistent behavior across the organization.
+
+<Tabs>
+  <Tab title="Sharing Credentials">
+    Share the App ID, Installation ID, and private key securely through: - Your
+    organization's secret management system - Encrypted password managers -
+    Secure internal documentation **Never share via:** - Email or Slack -
+    Unencrypted files - Public repositories
+  </Tab>
+  <Tab title="Team Setup Script">
+    Create a setup script for team members: ```bash #!/bin/bash #
+    team-crowdcontrol-setup.sh echo "Setting up crowdcontrol GitHub
+    integration..." # These values should be retrieved from your secret manager
+    export GITHUB_APP_ID="${ORG_GITHUB_APP_ID}" export GITHUB_INSTALLATION_ID="$
+    {ORG_GITHUB_INSTALLATION_ID}" export GITHUB_PRIVATE_KEY_PATH="$
+    {ORG_GITHUB_KEY_PATH}" echo "GitHub integration configured!" echo "Run
+    'crowdcontrol test' to verify setup" ```
+  </Tab>
+</Tabs>
+
+### Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Protect Private Keys" icon="key">
+    ```bash chmod 600 /path/to/key.pem ``` Store keys with restricted
+    permissions
+  </Card>
+  <Card title="Minimal Permissions" icon="shield">
+    Grant only necessary repository permissions to limit exposure
+  </Card>
+  <Card title="Monitor Activity" icon="chart-line">
+    Regularly review GitHub App activity in your security dashboard
+  </Card>
+  <Card title="Rotate Keys" icon="rotate">
+    Generate new private keys every 90 days to minimize compromise impact
+  </Card>
+</CardGroup>
+
+## GitHub Enterprise
+
+For GitHub Enterprise Server or Cloud, crowdcontrol needs your enterprise URL to authenticate with internal GitHub instances instead of the public GitHub.com.
+
+Configure your environment:
+
+```bash
+export GITHUB_BASE_URL="https://github.yourcompany.com"
+export GITHUB_APP_ID="your-app-id"
+export GITHUB_INSTALLATION_ID="your-installation-id"
+export GITHUB_PRIVATE_KEY_PATH="/path/to/key.pem"
+```

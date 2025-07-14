@@ -1,0 +1,224 @@
+---
+title: "Quickstart"
+description: "Deploy your first background agent in minutes"
+icon: "rocket"
+---
+
+# Getting Started with crowdcontrol
+
+In this tutorial, you'll learn crowdcontrol by creating your first containerized development environment. By the end, you'll have:
+
+- ✅ crowdcontrol installed and working
+- ✅ A running development container
+- ✅ Made your first code changes inside the container
+
+This tutorial takes about 15 minutes to complete.
+
+## What You'll Build
+
+You'll create a simple Node.js project in a containerized environment and see how crowdcontrol manages it for you.
+
+## Before You Start
+
+You need:
+
+- Docker installed and running
+- A terminal/command prompt
+- Basic familiarity with command line
+
+## Step 1: Install crowdcontrol
+
+First, let's install crowdcontrol. Choose your preferred method:
+
+<Tabs>
+  <Tab title="Using Cargo">```bash cargo install crowdcontrol-cli ```</Tab>
+  <Tab title="Using npm">```bash npm install -g crowdcontrol-cli ```</Tab>
+</Tabs>
+
+Verify the installation:
+
+```bash
+crowdcontrol --version
+```
+
+You should see the version number displayed.
+
+## Step 2: Check Your System
+
+Let's make sure everything is ready:
+
+```bash
+crowdcontrol doctor
+```
+
+This command checks that Docker is running and your system is ready. You should see all green checkmarks.
+
+## Step 3: Create Your First Project
+
+Now create a new crowdcontrol project:
+
+```bash
+crowdcontrol new my-first-project
+```
+
+crowdcontrol will:
+
+- Create a new directory called `my-first-project`
+- Set up the project configuration
+- Prepare the development environment
+
+You'll see output like:
+
+```
+✅ Created project directory
+✅ Initialized configuration
+✅ Project ready: my-first-project
+```
+
+## Step 4: Start the Development Environment
+
+Navigate to your project and start it:
+
+```bash
+cd my-first-project
+crowdcontrol start
+```
+
+crowdcontrol will:
+
+- Pull the necessary Docker image
+- Create your development container
+- Set up networking and volumes
+
+Wait for the message: `✅ Environment started successfully`
+
+## Step 5: Connect to Your Container
+
+Connect to your running development environment:
+
+```bash
+crowdcontrol connect
+```
+
+You're now inside your containerized development environment! Notice your prompt changed to show you're in the container.
+
+## Step 6: Explore Your Environment
+
+Let's explore what's available:
+
+```bash
+# Check what's installed
+node --version
+npm --version
+
+# Look around
+ls -la
+pwd
+```
+
+You'll see a clean, isolated development environment with Node.js ready to use.
+
+## Step 7: Create a Simple Application
+
+Create a simple Node.js application:
+
+```bash
+# Create a simple app
+echo 'console.log("Hello from crowdcontrol!");' > app.js
+
+# Run it
+node app.js
+```
+
+You should see: `Hello from crowdcontrol!`
+
+## Step 8: Make Changes Persist
+
+Create a package.json file:
+
+```bash
+npm init -y
+```
+
+Exit the container:
+
+```bash
+exit
+```
+
+## Step 9: Verify Persistence
+
+Connect back to your container:
+
+```bash
+crowdcontrol connect
+```
+
+Check that your files are still there:
+
+```bash
+ls -la
+cat app.js
+```
+
+Your files persisted! crowdcontrol automatically manages volumes so your work is saved.
+
+## Step 10: Stop Your Environment
+
+When you're done, stop the environment:
+
+```bash
+exit
+crowdcontrol stop
+```
+
+## What You've Learned
+
+Congratulations! You've successfully:
+
+- ✅ Installed crowdcontrol
+- ✅ Created a development project
+- ✅ Started a containerized environment
+- ✅ Connected to and used the container
+- ✅ Verified file persistence
+- ✅ Managed the environment lifecycle
+
+## Next Steps
+
+Now that you understand the basics, you can:
+
+<CardGroup cols={2}>
+  <Card
+    title="Create a Real Project"
+    icon="rocket"
+    href="/tutorials/first-project"
+  >
+    Build a complete application with GitHub integration
+  </Card>
+  <Card
+    title="Set Up GitHub Integration"
+    icon="github"
+    href="/tutorials/github-setup"
+  >
+    Connect crowdcontrol to your GitHub repositories
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+If something didn't work:
+
+<AccordionGroup>
+  <Accordion title="Docker not found">
+    Make sure Docker Desktop is installed and running. Try `docker --version`.
+  </Accordion>
+  <Accordion title="Permission errors">
+    On Linux, ensure your user is in the `docker` group: `sudo usermod -aG
+    docker $USER`
+  </Accordion>
+  <Accordion title="crowdcontrol command not found">
+    Restart your terminal after installation, or check your PATH variable.
+  </Accordion>
+</AccordionGroup>
+
+You're ready to explore more advanced crowdcontrol features!

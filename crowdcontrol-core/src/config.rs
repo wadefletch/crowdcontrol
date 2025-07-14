@@ -4,6 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use tracing::{debug, trace};
 
+use crate::github::GitHubConfig;
 use crate::Settings;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -13,6 +14,7 @@ pub struct Config {
     pub verbose: u8,
     pub default_memory: Option<String>,
     pub default_cpus: Option<String>,
+    pub github: Option<GitHubConfig>,
 }
 
 impl Config {
@@ -33,12 +35,16 @@ impl Config {
             )
         })?;
 
+        // Try to load GitHub config from environment
+        let github = GitHubConfig::from_env();
+
         Ok(Config {
             workspaces_dir: settings.workspaces_dir,
             image: settings.image,
             verbose: settings.verbose,
             default_memory: settings.default_memory,
             default_cpus: settings.default_cpus,
+            github,
         })
     }
 

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "crowdcontrol",
+  "theme": "maple",
+  "colors": {
+    "primary": "#9A3412",
+    "light": "#EA580C",
+    "dark": "#9A3412"
+  },
+  "icons": { "library": "lucide" },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": ["guides/getting-started", "guides/install"]
+      },
+      {
+        "group": "Guides",
+        "pages": ["guides/first-project", "guides/troubleshooting"]
+      },
+      {
+        "group": "Integrations",
+        "pages": ["integrations/github"]
+      },
+      {
+        "group": "Reference",
+        "pages": ["reference/commands", "reference/configuration"]
+      }
+    ]
+  },
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity"]
+  }
+}
