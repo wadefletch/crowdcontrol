@@ -115,7 +115,7 @@ fn execute_list(args: ProjectListArgs) -> Result<()> {
 
     match args.format {
         OutputFormat::Table => {
-            println!("{:<15} {:<50} {}", "SLUG", "URL", "DEFAULT BRANCH");
+            println!("{:<15} {:<50} DEFAULT BRANCH", "SLUG", "URL");
             println!("{}", "-".repeat(80));
             for project in projects {
                 println!(

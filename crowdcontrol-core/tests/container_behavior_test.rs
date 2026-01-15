@@ -6,7 +6,6 @@ use crowdcontrol_core::{Config, DockerClient};
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
-use tokio;
 /// Test that verifies the actual behavior inside containers matches expectations
 #[tokio::test]
 #[ignore = "requires Docker"]
@@ -43,7 +42,7 @@ async fn test_container_claude_authentication() -> Result<()> {
 
     // Test 1: Verify Claude CLI is available
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "which",
@@ -58,7 +57,7 @@ async fn test_container_claude_authentication() -> Result<()> {
 
     // Test 2: Verify working directory is /workspace
     let output = Command::new("docker")
-        .args(&["exec", &format!("crowdcontrol-{}", agent_name), "pwd"])
+        .args(["exec", &format!("crowdcontrol-{}", agent_name), "pwd"])
         .output()?;
 
     let pwd_binding = String::from_utf8_lossy(&output.stdout);
@@ -70,7 +69,7 @@ async fn test_container_claude_authentication() -> Result<()> {
 
     // Test 3: Verify workspace files are accessible
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "ls",
@@ -91,7 +90,7 @@ async fn test_container_claude_authentication() -> Result<()> {
 
     // Test 4: Verify Claude configuration directory exists
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "ls",
@@ -109,7 +108,7 @@ async fn test_container_claude_authentication() -> Result<()> {
 
     // Test 5: Verify user context
     let output = Command::new("docker")
-        .args(&["exec", &format!("crowdcontrol-{}", agent_name), "whoami"])
+        .args(["exec", &format!("crowdcontrol-{}", agent_name), "whoami"])
         .output()?;
 
     let user_binding = String::from_utf8_lossy(&output.stdout);
@@ -123,7 +122,7 @@ async fn test_container_claude_authentication() -> Result<()> {
     let tools = ["git", "jq", "curl", "node", "npm"];
     for tool in &tools {
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "which",
@@ -188,7 +187,7 @@ async fn test_container_claude_authentication_with_credentials() -> Result<()> {
 
     // Test: Run refresh script to set up Claude auth
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -200,7 +199,7 @@ async fn test_container_claude_authentication_with_credentials() -> Result<()> {
 
         // Verify credentials were copied
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "cat",
@@ -218,7 +217,7 @@ async fn test_container_claude_authentication_with_credentials() -> Result<()> {
 
         // Verify .claude.json transformations were applied
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "cat",
@@ -284,7 +283,7 @@ async fn test_container_file_permissions() -> Result<()> {
 
     // Test: Verify file is readable
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "cat",
@@ -301,7 +300,7 @@ async fn test_container_file_permissions() -> Result<()> {
 
     // Test: Verify file is writable
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "sh",
@@ -370,7 +369,7 @@ async fn test_container_environment_variables() -> Result<()> {
 
     for (var, expected) in &env_vars {
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "printenv",
@@ -391,7 +390,7 @@ async fn test_container_environment_variables() -> Result<()> {
 
     // Test: Verify PATH includes common directories
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "printenv",
@@ -438,29 +437,29 @@ async fn test_container_git_functionality() -> Result<()> {
 
     // Initialize git repo on host
     Command::new("git")
-        .args(&["init"])
+        .args(["init"])
         .current_dir(&workspace_path)
         .output()?;
 
     fs::write(workspace_path.join("README.md"), "# Test Repository")?;
 
     Command::new("git")
-        .args(&["config", "user.email", "test@example.com"])
+        .args(["config", "user.email", "test@example.com"])
         .current_dir(&workspace_path)
         .output()?;
 
     Command::new("git")
-        .args(&["config", "user.name", "Test User"])
+        .args(["config", "user.name", "Test User"])
         .current_dir(&workspace_path)
         .output()?;
 
     Command::new("git")
-        .args(&["add", "."])
+        .args(["add", "."])
         .current_dir(&workspace_path)
         .output()?;
 
     Command::new("git")
-        .args(&["commit", "-m", "Initial commit"])
+        .args(["commit", "-m", "Initial commit"])
         .current_dir(&workspace_path)
         .output()?;
 
@@ -473,7 +472,7 @@ async fn test_container_git_functionality() -> Result<()> {
 
     // Test: Verify git is functional in container
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "git",
@@ -493,7 +492,7 @@ async fn test_container_git_functionality() -> Result<()> {
 
     // Test: Verify git log shows our commit
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "git",
@@ -511,7 +510,7 @@ async fn test_container_git_functionality() -> Result<()> {
 
     // Test: Verify we can make changes and commit them
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "sh",

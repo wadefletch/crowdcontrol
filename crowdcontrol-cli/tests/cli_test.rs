@@ -135,7 +135,7 @@ fn test_new_invalid_agent_names() {
         cmd.arg("--workspaces-dir")
             .arg(temp_dir.path())
             .arg("new")
-            .arg(&name)
+            .arg(name)
             .arg("https://github.com/test/repo.git")
             .assert()
             .failure();

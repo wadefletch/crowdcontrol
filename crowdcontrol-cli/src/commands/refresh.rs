@@ -68,7 +68,7 @@ fn extract_keychain_credentials() -> Result<String> {
 
     // Try to extract credentials from keychain
     let output = Command::new("security")
-        .args(&[
+        .args([
             "find-generic-password",
             "-s",
             "Claude Code-credentials",

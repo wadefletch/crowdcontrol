@@ -5,7 +5,6 @@ use anyhow::Result;
 use crowdcontrol_core::{Agent, AgentStatus, Config, DockerClient};
 use std::fs;
 use tempfile::TempDir;
-use tokio;
 
 fn create_test_config() -> (Config, TempDir) {
     let temp_dir = tempfile::tempdir().unwrap();

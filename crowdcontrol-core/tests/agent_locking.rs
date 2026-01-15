@@ -90,7 +90,7 @@ fn test_concurrent_reads() {
             let result = load_agent_metadata(&config, "concurrent-read-test");
 
             // Verify the read was successful
-            let agent = result.expect(&format!("Thread {} failed to read", i));
+            let agent = result.unwrap_or_else(|_| panic!("Thread {} failed to read", i));
             assert_eq!(agent.name, "concurrent-read-test");
             assert_eq!(agent.repository, "https://github.com/test/repo.git");
         });

@@ -50,13 +50,14 @@ pub async fn execute(config: Config, args: StartArgs) -> Result<()> {
         let timeout_duration = Duration::from_secs(args.timeout);
         let start_time = std::time::Instant::now();
 
-        loop {
-            if start_time.elapsed() > timeout_duration {
-                pb.finish_and_clear();
-                print_warning("Timeout waiting for agent initialization");
-                break;
-            }
+        // TODO: Add actual readiness check (e.g., check if Docker daemon is ready inside container)
+        // For now, just wait a fixed amount of time after verifying container is running
+        sleep(Duration::from_secs(2)).await;
 
+        if start_time.elapsed() > timeout_duration {
+            pb.finish_and_clear();
+            print_warning("Timeout waiting for agent initialization");
+        } else {
             // Check if container is still running
             let status = agent.compute_live_status(&docker).await?;
             if status != AgentStatus::Running {
@@ -64,12 +65,8 @@ pub async fn execute(config: Config, args: StartArgs) -> Result<()> {
                 return Err(anyhow!("Agent stopped unexpectedly during initialization"));
             }
 
-            // TODO: Add actual readiness check (e.g., check if Docker daemon is ready inside container)
-            // For now, just wait a fixed amount of time
-            sleep(Duration::from_secs(2)).await;
             pb.finish_and_clear();
             print_success("Agent initialization complete");
-            break;
         }
     }
 

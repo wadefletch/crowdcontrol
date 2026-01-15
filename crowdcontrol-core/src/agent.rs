@@ -4,7 +4,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Seek, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tracing::{debug, info, trace};
 
@@ -291,7 +291,7 @@ pub fn clone_repository(
     Ok(())
 }
 
-pub fn verify_repository_setup(workspace_path: &PathBuf) -> Result<bool> {
+pub fn verify_repository_setup(workspace_path: &Path) -> Result<bool> {
     // Repository is now cloned directly to workspace root, so check for .crowdcontrol there
     let crowdcontrol_dir = workspace_path.join(".crowdcontrol");
     Ok(crowdcontrol_dir.exists())

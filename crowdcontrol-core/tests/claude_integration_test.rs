@@ -6,7 +6,6 @@ use crowdcontrol_core::{Config, DockerClient};
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
-use tokio;
 
 /// Integration tests specifically focused on Claude Code behavior inside containers
 #[tokio::test]
@@ -37,7 +36,7 @@ async fn test_claude_code_availability_and_version() -> Result<()> {
 
     // Test: Verify Claude Code is installed and accessible
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "claude",
@@ -66,7 +65,7 @@ async fn test_claude_code_availability_and_version() -> Result<()> {
 
     // Test: Verify Claude Code can show help
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "claude",
@@ -118,7 +117,7 @@ async fn test_claude_authentication_status() -> Result<()> {
 
     // Test: Check Claude authentication status (should fail without credentials)
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "claude",
@@ -197,7 +196,7 @@ async fn test_claude_with_mock_credentials() -> Result<()> {
 
     // Test: Run refresh script to configure Claude auth
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -215,7 +214,7 @@ async fn test_claude_with_mock_credentials() -> Result<()> {
 
     // Test: Verify credentials file was created with correct permissions
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "ls",
@@ -232,7 +231,7 @@ async fn test_claude_with_mock_credentials() -> Result<()> {
         if ls_output.contains(".credentials.json") {
             // Test: Verify credentials file has correct permissions (600)
             let output = Command::new("docker")
-                .args(&[
+                .args([
                     "exec",
                     &format!("crowdcontrol-{}", agent_name),
                     "stat",
@@ -250,7 +249,7 @@ async fn test_claude_with_mock_credentials() -> Result<()> {
 
             // Test: Verify credentials content
             let output = Command::new("docker")
-                .args(&[
+                .args([
                     "exec",
                     &format!("crowdcontrol-{}", agent_name),
                     "cat",
@@ -270,7 +269,7 @@ async fn test_claude_with_mock_credentials() -> Result<()> {
 
     // Test: Verify .claude.json transformations were applied
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "cat",
@@ -308,7 +307,7 @@ async fn test_claude_with_mock_credentials() -> Result<()> {
 
     // Test: Attempt to check Claude auth status with mock credentials
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "claude",
@@ -384,7 +383,7 @@ async fn test_claude_project_detection() -> Result<()> {
 
     // Test: Verify Claude can see and analyze project files
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "find",
@@ -406,7 +405,7 @@ async fn test_claude_project_detection() -> Result<()> {
 
     // Test: Verify Claude can read project files
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "cat",
@@ -426,7 +425,7 @@ async fn test_claude_project_detection() -> Result<()> {
 
     // Test: Verify directory structure is as expected
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "tree",
@@ -437,7 +436,7 @@ async fn test_claude_project_detection() -> Result<()> {
     if !output.status.success() {
         // If tree is not available, use ls -la
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "ls",
@@ -526,7 +525,7 @@ console.log("Working directory:", process.cwd());
 
     // Test: Verify Node.js is available and working
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "node",
@@ -545,7 +544,7 @@ console.log("Working directory:", process.cwd());
 
     // Test: Verify npm is available
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "npm",
@@ -560,7 +559,7 @@ console.log("Working directory:", process.cwd());
 
     // Test: Run the Node.js application
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "node",
@@ -585,7 +584,7 @@ console.log("Working directory:", process.cwd());
 
     // Test: npm scripts
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "npm",
@@ -603,7 +602,7 @@ console.log("Working directory:", process.cwd());
 
     // Test: npm start
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "npm",

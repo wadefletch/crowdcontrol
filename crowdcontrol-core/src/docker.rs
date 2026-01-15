@@ -424,11 +424,7 @@ impl DockerClient {
         }
 
         let container = &containers[0];
-        let state = container
-            .state
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or("unknown");
+        let state = container.state.as_deref().unwrap_or("unknown");
 
         match state {
             "created" => Ok(AgentStatus::Created),

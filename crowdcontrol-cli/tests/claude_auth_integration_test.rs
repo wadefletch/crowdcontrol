@@ -49,7 +49,7 @@ fn test_claude_auth_end_to_end() {
     // Test Claude Code authentication (run as developer user)
     let container_name = format!("crowdcontrol-{}", agent_name);
     let output = StdCommand::new("docker")
-        .args(&[
+        .args([
             "exec",
             "-u",
             "developer",
@@ -138,7 +138,7 @@ fn test_claude_files_mounted_correctly() {
 
     // Check /mnt/claude-config exists
     let output = StdCommand::new("docker")
-        .args(&["exec", &container_name, "test", "-d", "/mnt/claude-config"])
+        .args(["exec", &container_name, "test", "-d", "/mnt/claude-config"])
         .output()
         .expect("Failed to execute docker command");
 
@@ -149,7 +149,7 @@ fn test_claude_files_mounted_correctly() {
 
     // Check what's mounted (if host has Claude config)
     let ls_output = StdCommand::new("docker")
-        .args(&["exec", &container_name, "ls", "-la", "/mnt/claude-config/"])
+        .args(["exec", &container_name, "ls", "-la", "/mnt/claude-config/"])
         .output()
         .expect("Failed to execute docker command");
 
@@ -169,7 +169,7 @@ fn test_claude_files_mounted_correctly() {
 
     // Check if refresh script exists and is executable
     let script_check = StdCommand::new("docker")
-        .args(&[
+        .args([
             "exec",
             &container_name,
             "test",
@@ -186,7 +186,7 @@ fn test_claude_files_mounted_correctly() {
 
     // Verify Claude Code is installed
     let claude_version = StdCommand::new("docker")
-        .args(&["exec", &container_name, "claude", "--version"])
+        .args(["exec", &container_name, "claude", "--version"])
         .output()
         .expect("Failed to execute docker command");
 
@@ -201,7 +201,7 @@ fn test_claude_files_mounted_correctly() {
     if home_dir.join(".claude").exists() || home_dir.join(".claude.json").exists() {
         // Check if files were copied to user home
         let output = StdCommand::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &container_name,
                 "bash",

@@ -6,7 +6,6 @@ use crowdcontrol_core::{Config, DockerClient};
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
-use tokio;
 
 /// Tests specifically for the refresh-claude-auth.sh script behavior
 #[tokio::test]
@@ -36,7 +35,7 @@ async fn test_refresh_script_with_no_credentials() -> Result<()> {
 
     // Test: Run refresh script without any credentials
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -102,7 +101,7 @@ async fn test_refresh_script_with_keychain_credentials() -> Result<()> {
         r#"{"api_key": "sk-ant-api03-keychain-mock", "organization_id": "org-123"}"#;
 
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -129,7 +128,7 @@ async fn test_refresh_script_with_keychain_credentials() -> Result<()> {
 
     // Test: Verify credentials file was created
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "cat",
@@ -153,7 +152,7 @@ async fn test_refresh_script_with_keychain_credentials() -> Result<()> {
 
     // Test: Verify file permissions
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "stat",
@@ -173,7 +172,7 @@ async fn test_refresh_script_with_keychain_credentials() -> Result<()> {
 
     // Test: Verify file ownership
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "stat",
@@ -230,7 +229,7 @@ async fn test_refresh_script_with_file_based_credentials() -> Result<()> {
 
     // Mount the claude config directory
     Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "mkdir",
@@ -241,7 +240,7 @@ async fn test_refresh_script_with_file_based_credentials() -> Result<()> {
 
     // Copy the mock credentials into the container (simulating the mount)
     Command::new("docker")
-        .args(&[
+        .args([
             "cp",
             &format!("{}/.claude", claude_mount.display()),
             &format!("crowdcontrol-{}:/mnt/claude-config/", agent_name),
@@ -253,7 +252,7 @@ async fn test_refresh_script_with_file_based_credentials() -> Result<()> {
 
     // Test: Run refresh script with file-based credentials
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -278,7 +277,7 @@ async fn test_refresh_script_with_file_based_credentials() -> Result<()> {
 
         // Test: Verify credentials were copied
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "cat",
@@ -343,7 +342,7 @@ async fn test_refresh_script_claude_json_transformations() -> Result<()> {
     }"#;
 
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "sh",
@@ -362,7 +361,7 @@ async fn test_refresh_script_claude_json_transformations() -> Result<()> {
 
     // Test: Run refresh script to apply transformations
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -386,7 +385,7 @@ async fn test_refresh_script_claude_json_transformations() -> Result<()> {
 
         // Test: Verify transformations were applied
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "cat",
@@ -454,7 +453,7 @@ async fn test_refresh_script_error_handling() -> Result<()> {
 
     // Test: Empty credentials parameter
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -470,7 +469,7 @@ async fn test_refresh_script_error_handling() -> Result<()> {
 
     // Test: Invalid JSON as credentials parameter
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -489,7 +488,7 @@ async fn test_refresh_script_error_handling() -> Result<()> {
 
         // Verify the invalid content was written
         let output = Command::new("docker")
-            .args(&[
+            .args([
                 "exec",
                 &format!("crowdcontrol-{}", agent_name),
                 "cat",
@@ -510,7 +509,7 @@ async fn test_refresh_script_error_handling() -> Result<()> {
     // Test: Very long credentials string
     let long_creds = "x".repeat(10000);
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -527,7 +526,7 @@ async fn test_refresh_script_error_handling() -> Result<()> {
     // Test: Credentials with special characters
     let special_creds = r#"{"key": "test with spaces & symbols!@#$%^&*()"}"#;
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -574,7 +573,7 @@ async fn test_refresh_script_directory_creation() -> Result<()> {
 
     // Test: Ensure .claude directory doesn't exist initially
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "ls",
@@ -591,7 +590,7 @@ async fn test_refresh_script_directory_creation() -> Result<()> {
     // Test: Run refresh script with credentials to create directory
     let mock_creds = r#"{"api_key": "test-key"}"#;
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "refresh-claude-auth.sh",
@@ -606,7 +605,7 @@ async fn test_refresh_script_directory_creation() -> Result<()> {
 
     // Test: Verify directory was created
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "ls",
@@ -627,7 +626,7 @@ async fn test_refresh_script_directory_creation() -> Result<()> {
 
     // Test: Verify directory permissions
     let output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("crowdcontrol-{}", agent_name),
             "stat",

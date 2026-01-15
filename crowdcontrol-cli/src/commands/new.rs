@@ -83,7 +83,7 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
     let pb = create_progress_bar("Cloning repository...");
 
     // Wrap clone operation in a closure that handles cleanup on failure
-    let clone_result = (|| clone_repository(&repository_url, &workspace_path, branch.as_deref()))();
+    let clone_result = clone_repository(&repository_url, &workspace_path, branch.as_deref());
 
     pb.finish_and_clear();
 

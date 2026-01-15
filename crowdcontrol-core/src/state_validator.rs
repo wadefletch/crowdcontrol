@@ -119,13 +119,13 @@ impl StateValidator {
             .await?;
 
         match (agent.status, &container_info) {
-            (AgentStatus::Running, &None) => {
+            (AgentStatus::Running, None) => {
                 // Metadata says running but no container exists
                 inconsistencies.push(StateInconsistency::MissingContainer {
                     agent_name: agent_name.to_string(),
                 });
             }
-            (AgentStatus::Stopped, &Some(ref status)) if status.is_running => {
+            (AgentStatus::Stopped, Some(status)) if status.is_running => {
                 // Metadata says stopped but container is running
                 inconsistencies.push(StateInconsistency::IncorrectStatus {
                     agent_name: agent_name.to_string(),
@@ -133,7 +133,7 @@ impl StateValidator {
                     actual: AgentStatus::Running,
                 });
             }
-            (AgentStatus::Running, &Some(ref status)) if !status.is_running => {
+            (AgentStatus::Running, Some(status)) if !status.is_running => {
                 // Metadata says running but container is stopped
                 inconsistencies.push(StateInconsistency::IncorrectStatus {
                     agent_name: agent_name.to_string(),

@@ -18,7 +18,7 @@ fn test_repo_cloned_to_workspace_root() {
 
     // Initialize git repo
     std::process::Command::new("git")
-        .args(&["init"])
+        .args(["init"])
         .current_dir(&repo_dir)
         .output()
         .expect("Failed to init git repo");
@@ -28,26 +28,26 @@ fn test_repo_cloned_to_workspace_root() {
 
     // Configure git user for the test
     std::process::Command::new("git")
-        .args(&["config", "user.email", "test@example.com"])
+        .args(["config", "user.email", "test@example.com"])
         .current_dir(&repo_dir)
         .output()
         .unwrap();
 
     std::process::Command::new("git")
-        .args(&["config", "user.name", "Test User"])
+        .args(["config", "user.name", "Test User"])
         .current_dir(&repo_dir)
         .output()
         .unwrap();
 
     // Add and commit the file
     std::process::Command::new("git")
-        .args(&["add", "."])
+        .args(["add", "."])
         .current_dir(&repo_dir)
         .output()
         .unwrap();
 
     std::process::Command::new("git")
-        .args(&["commit", "-m", "Initial commit"])
+        .args(["commit", "-m", "Initial commit"])
         .current_dir(&repo_dir)
         .output()
         .unwrap();
@@ -114,7 +114,7 @@ fn test_claude_json_transformations() {
     fs::write(temp_file.path(), original_config.to_string()).unwrap();
 
     let output = std::process::Command::new("jq")
-        .args(&[".autoUpdates = false | .projects = {} | .mode = \"global\""])
+        .args([".autoUpdates = false | .projects = {} | .mode = \"global\""])
         .arg(temp_file.path())
         .output()
         .expect("Failed to run jq command");
@@ -173,7 +173,7 @@ fn test_refresh_script_jq_transformations() {
 
     // Simulate the jq transformation from the refresh script
     let output = std::process::Command::new("jq")
-        .args(&[".autoUpdates = false | .projects = {} | .mode = \"global\""])
+        .args([".autoUpdates = false | .projects = {} | .mode = \"global\""])
         .arg(&claude_file)
         .output()
         .expect("Failed to run jq transformation");
