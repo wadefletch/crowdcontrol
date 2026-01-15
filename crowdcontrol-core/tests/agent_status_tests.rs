@@ -38,6 +38,7 @@ async fn test_agent_status_computed_live_from_docker() -> Result<()> {
         branch: Some("main".to_string()),
         created_at: chrono::Utc::now(),
         workspace_path: workspace_path.clone(),
+        repo_slug: None,
     };
     
     crowdcontrol_core::agent::save_agent_metadata(&config, &agent)?;
@@ -93,6 +94,7 @@ async fn test_stale_container_id_detection() -> Result<()> {
         branch: Some("main".to_string()),
         created_at: chrono::Utc::now(),
         workspace_path: workspace_path.clone(),
+        repo_slug: None,
     };
     
     // Test: Agent with stale container ID should detect and return Created status
@@ -151,6 +153,7 @@ async fn test_agent_auto_repair_stale_container_id() -> Result<()> {
         branch: Some("main".to_string()),
         created_at: chrono::Utc::now(),
         workspace_path: workspace_path.clone(),
+        repo_slug: None,
     };
     
     crowdcontrol_core::agent::save_agent_metadata(&config, &agent)?;
@@ -182,6 +185,7 @@ async fn test_agent_always_loads_with_created_status() -> Result<()> {
         branch: Some("main".to_string()),
         created_at: chrono::Utc::now(),
         workspace_path: workspace_path.clone(),
+        repo_slug: None,
     };
     
     crowdcontrol_core::agent::save_agent_metadata(&config, &agent)?;
@@ -213,6 +217,7 @@ async fn test_status_field_completely_ignored() -> Result<()> {
         branch: Some("main".to_string()),
         created_at: chrono::Utc::now(),
         workspace_path: workspace_path.clone(),
+        repo_slug: None,
     };
     
     crowdcontrol_core::agent::save_agent_metadata(&config, &agent)?;

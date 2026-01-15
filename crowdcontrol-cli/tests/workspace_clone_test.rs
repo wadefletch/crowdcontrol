@@ -5,6 +5,7 @@ use std::fs;
 use tempfile::TempDir;
 
 #[test]
+#[ignore = "requires Docker"]
 fn test_repo_cloned_to_workspace_root() {
     // This test verifies that repositories are cloned directly to the workspace root,
     // not to workspace/agent-name/agent-name

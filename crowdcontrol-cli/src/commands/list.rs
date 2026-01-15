@@ -63,7 +63,7 @@ pub async fn execute(config: Config, args: ListArgs) -> Result<()> {
         }
 
         agent_infos.push(AgentInfo {
-            name: agent.name.clone(),
+            name: agent.display_name(), // Use display name (repo:label format if applicable)
             status: format!("{:?}", status),
             repository: agent.repository.clone(),
             branch: agent.branch.clone(),

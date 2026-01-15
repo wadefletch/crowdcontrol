@@ -26,6 +26,9 @@ pub struct Agent {
     pub branch: Option<String>,
     pub created_at: DateTime<Utc>,
     pub workspace_path: PathBuf,
+    /// The repo slug if this agent was created from a registered repo
+    #[serde(default)]
+    pub repo_slug: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -48,10 +51,33 @@ impl Agent {
                     // Container ID is stale, agent is effectively Created
                     return Ok(AgentStatus::Created);
                 }
-                
+
                 // Get live status from Docker
                 docker.get_container_status(&self.name).await
             }
+        }
+    }
+
+    /// Get the display name for this agent.
+    /// Returns "repo:label" format if agent has a repo_slug, otherwise just the name.
+    pub fn display_name(&self) -> String {
+        match &self.repo_slug {
+            Some(slug) => format!("{}:{}", slug, self.label()),
+            None => self.name.clone(),
+        }
+    }
+
+    /// Get the label portion of this agent's name.
+    /// For repo-based agents, this extracts the label from "repo-label" format.
+    /// For standalone agents, returns the full name.
+    pub fn label(&self) -> String {
+        match &self.repo_slug {
+            Some(slug) => {
+                // Name format is "repo-label", extract just the label
+                let prefix = format!("{}-", slug);
+                self.name.strip_prefix(&prefix).unwrap_or(&self.name).to_string()
+            }
+            None => self.name.clone(),
         }
     }
 }

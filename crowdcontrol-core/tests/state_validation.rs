@@ -32,6 +32,7 @@ fn create_test_agent(name: &str, status: AgentStatus) -> Agent {
         branch: Some("main".to_string()),
         created_at: Utc::now(),
         workspace_path: PathBuf::from("/test/workspace"),
+        repo_slug: None,
     }
 }
 

@@ -4,11 +4,18 @@ use std::process::{Command, Stdio};
 use crate::commands::ConnectArgs;
 use crate::utils::*;
 use crowdcontrol_core::load_agent_metadata;
+use crowdcontrol_core::parse_agent_identifier;
 use crowdcontrol_core::Config;
 use crowdcontrol_core::{AgentStatus, DockerClient};
+
 pub async fn execute(config: Config, args: ConnectArgs) -> Result<()> {
-    // Load agent metadata
-    let agent = load_agent_metadata(&config, &args.name)?;
+    // Parse the identifier to handle repo:label format
+    let identifier = parse_agent_identifier(&args.name)?;
+    let filesystem_name = identifier.to_filesystem_name();
+    let display_name = identifier.to_display_name();
+
+    // Load agent metadata using filesystem name
+    let agent = load_agent_metadata(&config, &filesystem_name)?;
 
     // Create Docker client
     let docker = DockerClient::new(config.clone())?;
@@ -18,13 +25,13 @@ pub async fn execute(config: Config, args: ConnectArgs) -> Result<()> {
     if status != AgentStatus::Running {
         return Err(anyhow!(
             "Agent '{}' is not running. Start it with: crowdcontrol start {}",
-            args.name,
-            args.name
+            display_name,
+            display_name
         ));
     }
 
     // Get container name
-    let container_name = format!("crowdcontrol-{}", args.name);
+    let container_name = format!("crowdcontrol-{}", filesystem_name);
 
     // Prepare command
     let default_command = vec!["claude", "--dangerously-skip-permissions"];
@@ -41,11 +48,11 @@ pub async fn execute(config: Config, args: ConnectArgs) -> Result<()> {
             .await?;
         print_success(&format!(
             "Command started in background in agent '{}'",
-            args.name
+            display_name
         ));
     } else {
         // Interactive connection
-        print_info(&format!("Connecting to agent '{}'...", args.name));
+        print_info(&format!("Connecting to agent '{}'...", display_name));
 
         // Use docker exec directly for better TTY handling
         let mut cmd = Command::new("docker")

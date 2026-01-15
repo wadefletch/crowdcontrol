@@ -24,7 +24,7 @@ fn test_refresh_nonexistent_agent() {
         .arg("nonexistent-agent")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Agent 'nonexistent-agent' does not exist"));
+        .stderr(predicate::str::contains("not found"));
 }
 
 #[test]

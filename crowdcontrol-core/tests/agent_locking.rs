@@ -26,6 +26,7 @@ fn create_test_agent(name: &str) -> Agent {
         branch: Some("main".to_string()),
         created_at: Utc::now(),
         workspace_path: PathBuf::from("/test/workspace"),
+        repo_slug: None,
     }
 }
 
@@ -124,6 +125,7 @@ fn test_concurrent_writes_are_serialized() {
                 branch: Some("main".to_string()),
                 created_at: Utc::now(),
                 workspace_path: PathBuf::from(format!("/test/workspace{}", i)),
+                repo_slug: None,
             };
 
             barrier.wait();
