@@ -43,9 +43,11 @@ fn test_project_add_help() {
 #[test]
 fn test_project_add_success() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("myapp")
@@ -58,9 +60,11 @@ fn test_project_add_success() {
 #[test]
 fn test_project_add_with_default_branch() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("myapp")
@@ -84,10 +88,12 @@ fn test_project_add_missing_arguments() {
 #[test]
 fn test_project_add_invalid_slug() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     // Slug with colon should fail
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("my:app")
@@ -100,10 +106,12 @@ fn test_project_add_invalid_slug() {
 #[test]
 fn test_project_add_duplicate() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     // Add first project
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("myapp")
@@ -114,6 +122,7 @@ fn test_project_add_duplicate() {
     // Try to add duplicate
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("myapp")
@@ -126,9 +135,11 @@ fn test_project_add_duplicate() {
 #[test]
 fn test_project_list_empty() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("list")
         .assert()
@@ -139,10 +150,12 @@ fn test_project_list_empty() {
 #[test]
 fn test_project_list_shows_projects() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     // Add a project first
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("myapp")
@@ -153,6 +166,7 @@ fn test_project_list_shows_projects() {
     // List projects
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("list")
         .assert()
@@ -164,10 +178,12 @@ fn test_project_list_shows_projects() {
 #[test]
 fn test_project_remove_success() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     // Add a project first
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("myapp")
@@ -178,6 +194,7 @@ fn test_project_remove_success() {
     // Remove it
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("remove")
         .arg("myapp")
@@ -187,6 +204,7 @@ fn test_project_remove_success() {
     // Verify it's gone
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("list")
         .assert()
@@ -197,9 +215,11 @@ fn test_project_remove_success() {
 #[test]
 fn test_project_remove_nonexistent() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("remove")
         .arg("nonexistent")
@@ -211,10 +231,12 @@ fn test_project_remove_nonexistent() {
 #[test]
 fn test_project_list_json_format() {
     let (_workspaces_dir, config_dir) = setup_test_env();
+    let xdg_config = config_dir.path().join(".config");
 
     // Add a project first
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("add")
         .arg("myapp")
@@ -225,6 +247,7 @@ fn test_project_list_json_format() {
     // List in JSON format
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
+        .env("XDG_CONFIG_HOME", &xdg_config)
         .arg("project")
         .arg("list")
         .arg("--format")
