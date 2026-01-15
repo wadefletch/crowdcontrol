@@ -88,10 +88,7 @@ fn test_full_agent_lifecycle() {
     ensure_docker_image_built();
 
     // This test requires Docker to be running
-    let test_agent_name = format!(
-        "test-agent-{}",
-        &uuid::Uuid::new_v4().to_string()[0..8]
-    );
+    let test_agent_name = format!("test-agent-{}", &uuid::Uuid::new_v4().to_string()[0..8]);
 
     // Get the absolute path to the fixture repo
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -233,14 +230,8 @@ fn test_full_agent_lifecycle() {
 fn test_multiple_agents() {
     ensure_docker_image_built();
 
-    let agent1 = format!(
-        "test-multi-1-{}",
-        &uuid::Uuid::new_v4().to_string()[0..8]
-    );
-    let agent2 = format!(
-        "test-multi-2-{}",
-        &uuid::Uuid::new_v4().to_string()[0..8]
-    );
+    let agent1 = format!("test-multi-1-{}", &uuid::Uuid::new_v4().to_string()[0..8]);
+    let agent2 = format!("test-multi-2-{}", &uuid::Uuid::new_v4().to_string()[0..8]);
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let fixture_path = PathBuf::from(manifest_dir).join("tests/fixtures/nodejs-test-repo");
@@ -299,10 +290,7 @@ fn test_multiple_agents() {
 fn test_resource_limits() {
     ensure_docker_image_built();
 
-    let test_agent = format!(
-        "test-limits-{}",
-        &uuid::Uuid::new_v4().to_string()[0..8]
-    );
+    let test_agent = format!("test-limits-{}", &uuid::Uuid::new_v4().to_string()[0..8]);
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let fixture_path = PathBuf::from(manifest_dir).join("tests/fixtures/nodejs-test-repo");
@@ -332,10 +320,7 @@ fn test_agent_start_and_connect_issue() {
     ensure_docker_image_built();
 
     // This test reproduces the issue where agent starts but shows as not running
-    let test_agent_name = format!(
-        "test-issue-{}",
-        &uuid::Uuid::new_v4().to_string()[0..8]
-    );
+    let test_agent_name = format!("test-issue-{}", &uuid::Uuid::new_v4().to_string()[0..8]);
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let fixture_path = PathBuf::from(manifest_dir).join("tests/fixtures/nodejs-test-repo");
@@ -425,10 +410,7 @@ fn test_json_output_format() {
 fn test_refresh_claude_credentials() {
     ensure_docker_image_built();
 
-    let test_agent_name = format!(
-        "test-refresh-{}",
-        &uuid::Uuid::new_v4().to_string()[0..8]
-    );
+    let test_agent_name = format!("test-refresh-{}", &uuid::Uuid::new_v4().to_string()[0..8]);
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
     let fixture_path = PathBuf::from(manifest_dir).join("tests/fixtures/nodejs-test-repo");
