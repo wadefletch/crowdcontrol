@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Context, Result};
+#[cfg(target_os = "macos")]
 use std::process::Command;
 
 use crate::commands::RefreshArgs;
