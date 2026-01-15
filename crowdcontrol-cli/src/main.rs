@@ -89,8 +89,8 @@ enum Commands {
     /// Refresh Claude Code authentication for an agent
     Refresh(RefreshArgs),
 
-    /// Manage repository definitions
-    Repo(repo::RepoCommand),
+    /// Manage project definitions
+    Project(project::ProjectCommand),
 
     /// Generate shell completions
     Completions(CompletionsArgs),
@@ -135,7 +135,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Remove(args) => remove::execute(config, args).await,
         Commands::Logs(args) => logs::execute(config, args).await,
         Commands::Refresh(args) => refresh::execute(config, args).await,
-        Commands::Repo(args) => repo::execute(config, args).await,
+        Commands::Project(args) => project::execute(config, args).await,
         Commands::Completions(args) => completions::execute(config, args).await,
         Commands::Doctor(args) => doctor::execute(config, args).await,
     }

@@ -1,5 +1,5 @@
-// TDD: Tests for CLI repo subcommands
-// Run with: cargo test --package crowdcontrol-cli --test repo_cli_test
+// TDD: Tests for CLI project subcommands
+// Run with: cargo test --package crowdcontrol-cli --test project_cli_test
 
 use assert_cmd::Command;
 use predicates::prelude::*;
@@ -18,20 +18,20 @@ fn setup_test_env() -> (TempDir, TempDir) {
 }
 
 #[test]
-fn test_repo_help() {
+fn test_project_help() {
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
-    cmd.arg("repo")
+    cmd.arg("project")
         .arg("--help")
         .assert()
         .success()
-        .stdout(predicates::str::contains("repo"))
+        .stdout(predicates::str::contains("project"))
         .stdout(predicates::str::contains("Usage:"));
 }
 
 #[test]
-fn test_repo_add_help() {
+fn test_project_add_help() {
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
-    cmd.arg("repo")
+    cmd.arg("project")
         .arg("add")
         .arg("--help")
         .assert()
@@ -41,12 +41,12 @@ fn test_repo_add_help() {
 }
 
 #[test]
-fn test_repo_add_success() {
+fn test_project_add_success() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg("git@github.com:org/myapp.git")
@@ -56,12 +56,12 @@ fn test_repo_add_success() {
 }
 
 #[test]
-fn test_repo_add_with_default_branch() {
+fn test_project_add_with_default_branch() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg("git@github.com:org/myapp.git")
@@ -72,9 +72,9 @@ fn test_repo_add_with_default_branch() {
 }
 
 #[test]
-fn test_repo_add_missing_arguments() {
+fn test_project_add_missing_arguments() {
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
-    cmd.arg("repo")
+    cmd.arg("project")
         .arg("add")
         .assert()
         .failure()
@@ -82,13 +82,13 @@ fn test_repo_add_missing_arguments() {
 }
 
 #[test]
-fn test_repo_add_invalid_slug() {
+fn test_project_add_invalid_slug() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
     // Slug with colon should fail
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("my:app")
         .arg("git@github.com:org/myapp.git")
@@ -98,13 +98,13 @@ fn test_repo_add_invalid_slug() {
 }
 
 #[test]
-fn test_repo_add_duplicate() {
+fn test_project_add_duplicate() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
-    // Add first repo
+    // Add first project
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg("git@github.com:org/myapp.git")
@@ -114,7 +114,7 @@ fn test_repo_add_duplicate() {
     // Try to add duplicate
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg("git@github.com:other/myapp.git")
@@ -124,36 +124,36 @@ fn test_repo_add_duplicate() {
 }
 
 #[test]
-fn test_repo_list_empty() {
+fn test_project_list_empty() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("list")
         .assert()
         .success()
-        .stdout(predicates::str::contains("No repos").or(predicates::str::is_empty()));
+        .stdout(predicates::str::contains("No projects").or(predicates::str::is_empty()));
 }
 
 #[test]
-fn test_repo_list_shows_repos() {
+fn test_project_list_shows_projects() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
-    // Add a repo first
+    // Add a project first
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg("git@github.com:org/myapp.git")
         .assert()
         .success();
 
-    // List repos
+    // List projects
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("list")
         .assert()
         .success()
@@ -162,13 +162,13 @@ fn test_repo_list_shows_repos() {
 }
 
 #[test]
-fn test_repo_remove_success() {
+fn test_project_remove_success() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
-    // Add a repo first
+    // Add a project first
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg("git@github.com:org/myapp.git")
@@ -178,7 +178,7 @@ fn test_repo_remove_success() {
     // Remove it
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("remove")
         .arg("myapp")
         .assert()
@@ -187,7 +187,7 @@ fn test_repo_remove_success() {
     // Verify it's gone
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("list")
         .assert()
         .success()
@@ -195,12 +195,12 @@ fn test_repo_remove_success() {
 }
 
 #[test]
-fn test_repo_remove_nonexistent() {
+fn test_project_remove_nonexistent() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("remove")
         .arg("nonexistent")
         .assert()
@@ -209,13 +209,13 @@ fn test_repo_remove_nonexistent() {
 }
 
 #[test]
-fn test_repo_list_json_format() {
+fn test_project_list_json_format() {
     let (_workspaces_dir, config_dir) = setup_test_env();
 
-    // Add a repo first
+    // Add a project first
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg("git@github.com:org/myapp.git")
@@ -225,7 +225,7 @@ fn test_repo_list_json_format() {
     // List in JSON format
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("list")
         .arg("--format")
         .arg("json")

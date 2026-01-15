@@ -26,9 +26,9 @@ pub struct Agent {
     pub branch: Option<String>,
     pub created_at: DateTime<Utc>,
     pub workspace_path: PathBuf,
-    /// The repo slug if this agent was created from a registered repo
-    #[serde(default)]
-    pub repo_slug: Option<String>,
+    /// The project slug if this agent was created from a registered project
+    #[serde(default, alias = "repo_slug")]
+    pub project_slug: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -59,21 +59,21 @@ impl Agent {
     }
 
     /// Get the display name for this agent.
-    /// Returns "repo:label" format if agent has a repo_slug, otherwise just the name.
+    /// Returns "project:label" format if agent has a project_slug, otherwise just the name.
     pub fn display_name(&self) -> String {
-        match &self.repo_slug {
+        match &self.project_slug {
             Some(slug) => format!("{}:{}", slug, self.label()),
             None => self.name.clone(),
         }
     }
 
     /// Get the label portion of this agent's name.
-    /// For repo-based agents, this extracts the label from "repo-label" format.
+    /// For project-based agents, this extracts the label from "project-label" format.
     /// For standalone agents, returns the full name.
     pub fn label(&self) -> String {
-        match &self.repo_slug {
+        match &self.project_slug {
             Some(slug) => {
-                // Name format is "repo-label", extract just the label
+                // Name format is "project-label", extract just the label
                 let prefix = format!("{}-", slug);
                 self.name.strip_prefix(&prefix).unwrap_or(&self.name).to_string()
             }

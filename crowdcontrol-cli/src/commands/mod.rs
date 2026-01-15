@@ -8,19 +8,19 @@ pub mod logs;
 pub mod new;
 pub mod refresh;
 pub mod remove;
-pub mod repo;
+pub mod project;
 pub mod start;
 pub mod stop;
 
 /// Arguments for the new command
 #[derive(Args)]
 pub struct NewArgs {
-    /// Name for the agent (use repo:label syntax or plain name)
-    #[arg(help = "Agent name (repo:label format) or plain name if using repository URL")]
+    /// Name for the agent (use project:label syntax or plain name)
+    #[arg(help = "Agent name (project:label format) or plain name if using repository URL")]
     pub name: String,
 
-    /// Git repository URL to clone (optional if using repo:label syntax)
-    #[arg(help = "Git repository URL (optional when using repo:label format)")]
+    /// Git repository URL to clone (optional if using project:label syntax)
+    #[arg(help = "Git repository URL (optional when using project:label format)")]
     pub repository: Option<String>,
 
     /// Custom branch to checkout

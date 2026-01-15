@@ -19,9 +19,9 @@ pub struct AgentMetadata {
     pub branch: Option<String>,
     pub created_at: DateTime<Utc>,
     pub container_id: Option<String>,
-    /// The repo slug if this agent was created from a registered repo
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub repo_slug: Option<String>,
+    /// The project slug if this agent was created from a registered project
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "repo_slug")]
+    pub project_slug: Option<String>,
 }
 
 pub fn save_agent_metadata(config: &Config, agent: &Agent) -> Result<()> {
@@ -48,7 +48,7 @@ pub fn save_agent_metadata(config: &Config, agent: &Agent) -> Result<()> {
         branch: agent.branch.clone(),
         created_at: agent.created_at,
         container_id: agent.container_id.clone(),
-        repo_slug: agent.repo_slug.clone(),
+        project_slug: agent.project_slug.clone(),
     };
 
     let json = serde_json::to_string_pretty(&metadata)?;
@@ -136,7 +136,7 @@ pub fn load_agent_metadata(config: &Config, name: &str) -> Result<Agent> {
         branch: metadata.branch,
         created_at: metadata.created_at,
         workspace_path,
-        repo_slug: metadata.repo_slug,
+        project_slug: metadata.project_slug,
     })
 }
 
@@ -208,7 +208,7 @@ where
         branch: metadata.branch,
         created_at: metadata.created_at,
         workspace_path: workspace_path.clone(),
-        repo_slug: metadata.repo_slug,
+        project_slug: metadata.project_slug,
     };
 
     // Apply the update
@@ -222,7 +222,7 @@ where
         branch: agent.branch.clone(),
         created_at: agent.created_at,
         container_id: agent.container_id.clone(),
-        repo_slug: agent.repo_slug.clone(),
+        project_slug: agent.project_slug.clone(),
     };
 
     let updated_json = serde_json::to_string_pretty(&updated_metadata)?;

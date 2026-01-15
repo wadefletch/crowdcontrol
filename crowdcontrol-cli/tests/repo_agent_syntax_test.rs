@@ -1,4 +1,4 @@
-// TDD: Tests for repo:label syntax in new/connect commands
+// TDD: Tests for project:label syntax in new/connect commands
 // Run with: cargo test --package crowdcontrol-cli --test repo_agent_syntax_test
 
 use assert_cmd::Command;
@@ -52,10 +52,10 @@ fn setup_test_env() -> (TempDir, TempDir, TempDir) {
 }
 
 #[test]
-fn test_new_with_repo_label_syntax_missing_repo() {
+fn test_new_with_project_label_syntax_missing_project() {
     let (workspaces_dir, config_dir, _repo_dir) = setup_test_env();
 
-    // Try to create agent with repo:label syntax but repo doesn't exist
+    // Try to create agent with project:label syntax but project doesn't exist
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
         .arg("--workspaces-dir")
@@ -69,20 +69,20 @@ fn test_new_with_repo_label_syntax_missing_repo() {
 
 #[test]
 #[ignore = "requires Docker"]
-fn test_new_with_repo_label_syntax_success() {
+fn test_new_with_project_label_syntax_success() {
     let (workspaces_dir, config_dir, repo_dir) = setup_test_env();
 
-    // First add the repo
+    // First add the project
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg(repo_dir.path())
         .assert()
         .success();
 
-    // Now create agent using repo:label syntax
+    // Now create agent using project:label syntax
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
         .arg("--workspaces-dir")
@@ -100,13 +100,13 @@ fn test_new_with_repo_label_syntax_success() {
 
 #[test]
 #[ignore = "requires Docker"]
-fn test_new_with_repo_label_uses_default_branch() {
+fn test_new_with_project_label_uses_default_branch() {
     let (workspaces_dir, config_dir, repo_dir) = setup_test_env();
 
-    // Add repo with default branch
+    // Add project with default branch
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
-        .arg("repo")
+        .arg("project")
         .arg("add")
         .arg("myapp")
         .arg(repo_dir.path())
@@ -143,10 +143,10 @@ fn test_new_with_url_still_works() {
 }
 
 #[test]
-fn test_new_requires_url_or_registered_repo() {
+fn test_new_requires_url_or_registered_project() {
     let (workspaces_dir, config_dir, _repo_dir) = setup_test_env();
 
-    // If identifier contains colon but repo doesn't exist, should fail
+    // If identifier contains colon but project doesn't exist, should fail
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
         .arg("--workspaces-dir")
@@ -159,10 +159,10 @@ fn test_new_requires_url_or_registered_repo() {
 
 #[test]
 #[ignore = "requires Docker"]
-fn test_list_shows_display_name_with_repo() {
+fn test_list_shows_display_name_with_project() {
     let (workspaces_dir, config_dir, _repo_dir) = setup_test_env();
 
-    // Create a fake agent metadata with repo_slug
+    // Create a fake agent metadata with project_slug
     let agent_name = "myapp-main";
     let agent_dir = workspaces_dir.path().join(agent_name);
     let metadata_dir = agent_dir.join(".crowdcontrol");
@@ -175,7 +175,7 @@ fn test_list_shows_display_name_with_repo() {
         "branch": "main",
         "created_at": "2024-01-01T00:00:00Z",
         "container_id": null,
-        "repo_slug": "myapp"
+        "project_slug": "myapp"
     });
 
     fs::write(metadata_dir.join("metadata.json"), metadata.to_string()).unwrap();
@@ -193,10 +193,10 @@ fn test_list_shows_display_name_with_repo() {
 
 #[test]
 #[ignore = "requires Docker"]
-fn test_connect_with_repo_label_syntax() {
+fn test_connect_with_project_label_syntax() {
     let (workspaces_dir, config_dir, _repo_dir) = setup_test_env();
 
-    // Create a fake agent metadata with repo_slug
+    // Create a fake agent metadata with project_slug
     let agent_name = "myapp-main";
     let agent_dir = workspaces_dir.path().join(agent_name);
     let metadata_dir = agent_dir.join(".crowdcontrol");
@@ -209,12 +209,12 @@ fn test_connect_with_repo_label_syntax() {
         "branch": "main",
         "created_at": "2024-01-01T00:00:00Z",
         "container_id": null,
-        "repo_slug": "myapp"
+        "project_slug": "myapp"
     });
 
     fs::write(metadata_dir.join("metadata.json"), metadata.to_string()).unwrap();
 
-    // Connect using repo:label syntax should find the agent
+    // Connect using project:label syntax should find the agent
     let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
     cmd.env("HOME", config_dir.path())
         .arg("--workspaces-dir")

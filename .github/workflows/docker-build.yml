@@ -49,8 +49,11 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./container
-        platforms: linux/amd64,linux/arm64
+        # Multi-platform for pushes, single platform for PR testing (allows load)
+        platforms: ${{ github.event_name != 'pull_request' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
         push: ${{ github.event_name != 'pull_request' }}
+        # Load into local daemon for PR testing
+        load: ${{ github.event_name == 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -59,5 +62,6 @@ jobs:
     - name: Test image
       if: github.event_name == 'pull_request'
       run: |
-        # Simple test to make sure image can be built
-        docker run --rm --entrypoint=/bin/bash ${{ env.IMAGE_NAME }}:latest -c "echo 'Docker image test successful'"
+        # Test that the built image runs correctly (use first tag from multi-line output)
+        IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n 1)
+        docker run --rm --entrypoint=/bin/bash "$IMAGE_TAG" -c "echo 'Docker image test successful'"

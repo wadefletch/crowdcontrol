@@ -64,30 +64,55 @@ docker build -t crowdcontrol:latest ./container/
 
 ## Usage
 
+### Managing projects
+
+Register frequently-used repositories as projects for quick agent creation:
+
+```bash
+# Add a project
+crowdcontrol project add myapp git@github.com:org/myapp.git
+
+# Add with a default branch
+crowdcontrol project add myapp git@github.com:org/myapp.git --default-branch develop
+
+# List all projects
+crowdcontrol project list
+
+# Remove a project
+crowdcontrol project remove myapp
+```
+
 ### Creating a new agent
 
 ```bash
-# Clone a repository and create a new agent
-crowdcontrol new myapp-main git@github.com:org/myapp.git
+# Create an agent using a registered project (recommended)
+crowdcontrol new myapp:main
 
-# Clone with a specific branch
-crowdcontrol new myapp-feature git@github.com:org/myapp.git --branch feature/auth
+# Create with a specific branch (overrides project default)
+crowdcontrol new myapp:feature --branch feature/auth
+
+# Create using a repository URL directly (standalone agent)
+crowdcontrol new standalone-agent git@github.com:org/myapp.git
 
 # Set custom resource limits
-crowdcontrol new myapp-test git@github.com:org/myapp.git --memory 4g --cpus 2
+crowdcontrol new myapp:test --memory 4g --cpus 2
 ```
+
+The `project:label` format (e.g., `myapp:main`) creates an agent with:
+- Filesystem name: `myapp-main` (hyphen-separated)
+- Display name: `myapp:main` (shown in `list` output)
 
 ### Managing agents
 
 ```bash
-# Start an agent
-crowdcontrol start myapp-main
+# Start an agent (use project:label or filesystem name)
+crowdcontrol start myapp:main
 
 # Connect to an agent with Claude Code
-crowdcontrol connect myapp-main
+crowdcontrol connect myapp:main
 
 # Stop an agent
-crowdcontrol stop myapp-main
+crowdcontrol stop myapp:main
 
 # Stop all running agents
 crowdcontrol stop --all
@@ -96,10 +121,10 @@ crowdcontrol stop --all
 crowdcontrol list
 
 # View agent logs
-crowdcontrol logs myapp-main
+crowdcontrol logs myapp:main
 
 # Remove an agent
-crowdcontrol remove myapp-main
+crowdcontrol remove myapp:main
 ```
 
 ### Configuration
@@ -114,6 +139,8 @@ CrowdControl supports configuration through multiple sources, with the following
 #### Config File
 
 Create a configuration file at `~/.config/crowdcontrol/config.toml`:
+
+**Note**: Project definitions are stored separately at `~/.config/crowdcontrol/projects.toml` and managed via the `crowdcontrol project` commands.
 
 ```toml
 # Directory for storing agent workspaces

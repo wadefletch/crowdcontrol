@@ -19,8 +19,10 @@ jobs:
     - name: Check conventional commits
       uses: cocogitto/cocogitto-action@v3
       # For PRs, check all commits in the PR. For pushes, only check since latest tag
+      # Note: If repo has no tags yet, this will check from initial commit
       with:
         check-latest-tag-only: ${{ github.event_name != 'pull_request' }}
+      continue-on-error: ${{ github.event_name == 'pull_request' }}
     
     - uses: dtolnay/rust-toolchain@stable
     

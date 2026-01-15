@@ -6,38 +6,38 @@ use crate::commands::NewArgs;
 use crate::utils::*;
 use crowdcontrol_core::{
     clone_repository, parse_agent_identifier, save_agent_metadata, validate_agent_name,
-    verify_repository_setup, Agent, AgentStatus, Config, DockerClient, RepoStore,
+    verify_repository_setup, Agent, AgentStatus, Config, DockerClient, ProjectStore,
 };
 
-fn get_repos_path() -> std::path::PathBuf {
+fn get_projects_path() -> std::path::PathBuf {
     dirs::config_dir()
         .expect("Unable to determine config directory")
         .join("crowdcontrol")
-        .join("repos.toml")
+        .join("projects.toml")
 }
 
 pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
-    // Parse the identifier to see if it's repo:label format
+    // Parse the identifier to see if it's project:label format
     let identifier = parse_agent_identifier(&args.name)?;
 
     // Determine the repository URL and agent name based on the identifier
-    let (filesystem_name, display_name, repository_url, repo_slug, branch) =
-        if let Some(slug) = &identifier.repo_slug {
-            // repo:label format - look up the repo
-            let repos_path = get_repos_path();
-            let store = RepoStore::new(repos_path);
+    let (filesystem_name, display_name, repository_url, project_slug, branch) =
+        if let Some(slug) = &identifier.project_slug {
+            // project:label format - look up the project
+            let projects_path = get_projects_path();
+            let store = ProjectStore::new(projects_path);
 
-            let repo = store
+            let project = store
                 .get(slug)?
-                .ok_or_else(|| anyhow!("Repo '{}' not found. Add it with: crowdcontrol repo add {} <url>", slug, slug))?;
+                .ok_or_else(|| anyhow!("Project '{}' not found. Add it with: crowdcontrol project add {} <url>", slug, slug))?;
 
-            // Use explicit branch arg, or repo's default branch, or None
-            let effective_branch = args.branch.or(repo.default_branch);
+            // Use explicit branch arg, or project's default branch, or None
+            let effective_branch = args.branch.or(project.default_branch);
 
             (
                 identifier.to_filesystem_name(),
                 identifier.to_display_name(),
-                repo.url,
+                project.url,
                 Some(slug.clone()),
                 effective_branch,
             )
@@ -45,9 +45,9 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
             // Plain name format - requires repository URL
             let repository = args.repository.ok_or_else(|| {
                 anyhow!(
-                    "Repository URL required when not using repo:label format.\n\
+                    "Repository URL required when not using project:label format.\n\
                      Usage: crowdcontrol new <name> <repository>\n\
-                     Or register a repo: crowdcontrol repo add <slug> <url>"
+                     Or register a project: crowdcontrol project add <slug> <url>"
                 )
             })?;
 
@@ -144,7 +144,7 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
             branch,
             created_at: Utc::now(),
             workspace_path: workspace_path.clone(),
-            repo_slug,
+            project_slug,
         };
 
         save_agent_metadata(&config, &agent)?;

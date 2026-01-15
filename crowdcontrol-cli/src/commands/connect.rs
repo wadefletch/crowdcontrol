@@ -9,7 +9,7 @@ use crowdcontrol_core::Config;
 use crowdcontrol_core::{AgentStatus, DockerClient};
 
 pub async fn execute(config: Config, args: ConnectArgs) -> Result<()> {
-    // Parse the identifier to handle repo:label format
+    // Parse the identifier to handle project:label format
     let identifier = parse_agent_identifier(&args.name)?;
     let filesystem_name = identifier.to_filesystem_name();
     let display_name = identifier.to_display_name();
