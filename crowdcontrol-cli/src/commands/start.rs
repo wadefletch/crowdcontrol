@@ -4,8 +4,8 @@ use tokio::time::sleep;
 
 use crate::commands::StartArgs;
 use crate::utils::*;
+use crowdcontrol_core::load_agent_metadata;
 use crowdcontrol_core::Config;
-use crowdcontrol_core::{load_agent_metadata};
 use crowdcontrol_core::{AgentStatus, DockerClient};
 pub async fn execute(config: Config, args: StartArgs) -> Result<()> {
     // Load agent metadata

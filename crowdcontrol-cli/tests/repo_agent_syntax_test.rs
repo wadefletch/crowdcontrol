@@ -64,7 +64,9 @@ fn test_new_with_project_label_syntax_missing_project() {
         .arg("myapp:main")
         .assert()
         .failure()
-        .stderr(predicates::str::contains("not found").or(predicates::str::contains("does not exist")));
+        .stderr(
+            predicates::str::contains("not found").or(predicates::str::contains("does not exist")),
+        );
 }
 
 #[test]
@@ -95,7 +97,10 @@ fn test_new_with_project_label_syntax_success() {
 
     // Verify the agent was created with correct filesystem name
     let agent_dir = workspaces_dir.path().join("myapp-main");
-    assert!(agent_dir.exists(), "Agent directory should exist at myapp-main");
+    assert!(
+        agent_dir.exists(),
+        "Agent directory should exist at myapp-main"
+    );
 }
 
 #[test]
@@ -223,5 +228,8 @@ fn test_connect_with_project_label_syntax() {
         .arg("myapp:main")
         .assert()
         .failure() // Will fail because no container, but should find the agent
-        .stderr(predicates::str::contains("not running").or(predicates::str::contains("not found").not()));
+        .stderr(
+            predicates::str::contains("not running")
+                .or(predicates::str::contains("not found").not()),
+        );
 }

@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Context, Result};
 use bollard::container::{
-    Config as ContainerConfig, CreateContainerOptions, InspectContainerOptions, ListContainersOptions, LogsOptions,
-    RemoveContainerOptions, StartContainerOptions, StopContainerOptions,
+    Config as ContainerConfig, CreateContainerOptions, InspectContainerOptions,
+    ListContainersOptions, LogsOptions, RemoveContainerOptions, StartContainerOptions,
+    StopContainerOptions,
 };
 use bollard::exec::{CreateExecOptions, StartExecResults};
 use bollard::image::CreateImageOptions;
@@ -47,7 +48,10 @@ impl Agent {
             None => Ok(AgentStatus::Created),
             Some(container_id) => {
                 // First validate the container ID is still valid for this agent
-                if !docker.validate_container_id(&self.name, container_id).await? {
+                if !docker
+                    .validate_container_id(&self.name, container_id)
+                    .await?
+                {
                     // Container ID is stale, agent is effectively Created
                     return Ok(AgentStatus::Created);
                 }
@@ -75,7 +79,10 @@ impl Agent {
             Some(slug) => {
                 // Name format is "project-label", extract just the label
                 let prefix = format!("{}-", slug);
-                self.name.strip_prefix(&prefix).unwrap_or(&self.name).to_string()
+                self.name
+                    .strip_prefix(&prefix)
+                    .unwrap_or(&self.name)
+                    .to_string()
             }
             None => self.name.clone(),
         }
@@ -192,7 +199,7 @@ impl DockerClient {
 
         // Mount Claude config - both new and legacy formats
         let home_dir = dirs::home_dir().unwrap();
-        
+
         // Mount .claude directory if it exists
         let claude_dir = home_dir.join(".claude");
         if claude_dir.exists() {
@@ -204,7 +211,7 @@ impl DockerClient {
                 ..Default::default()
             });
         }
-        
+
         // Mount legacy .claude.json if it exists
         let claude_legacy = home_dir.join(".claude.json");
         if claude_legacy.exists() {
@@ -216,7 +223,6 @@ impl DockerClient {
                 ..Default::default()
             });
         }
-        
 
         let mut host_config = HostConfig {
             privileged: Some(true),
@@ -242,7 +248,7 @@ impl DockerClient {
 
         let mut labels = HashMap::new();
         labels.insert("app".to_string(), "crowdcontrol".to_string());
-        
+
         let container_config = ContainerConfig {
             image: Some(self.config.image.clone()),
             host_config: Some(host_config),
@@ -313,7 +319,8 @@ impl DockerClient {
         cmd: Vec<&str>,
         attach: bool,
     ) -> Result<()> {
-        self.exec_in_container_as_user(container_id, cmd, attach, None).await
+        self.exec_in_container_as_user(container_id, cmd, attach, None)
+            .await
     }
 
     pub async fn exec_in_container_as_user(
@@ -471,11 +478,19 @@ impl DockerClient {
     }
 
     /// Validate that a container ID actually belongs to the specified agent
-    pub async fn validate_container_id(&self, agent_name: &str, container_id: &str) -> Result<bool> {
+    pub async fn validate_container_id(
+        &self,
+        agent_name: &str,
+        container_id: &str,
+    ) -> Result<bool> {
         let expected_container_name = format!("crowdcontrol-{}", agent_name);
-        
+
         // Get container details
-        match self.docker.inspect_container(container_id, None::<InspectContainerOptions>).await {
+        match self
+            .docker
+            .inspect_container(container_id, None::<InspectContainerOptions>)
+            .await
+        {
             Ok(container) => {
                 // Check if container name matches expected agent name
                 if let Some(name) = container.name {

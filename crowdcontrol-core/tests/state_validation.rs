@@ -58,10 +58,12 @@ async fn test_detect_missing_workspace() {
     // Find the specific MissingWorkspace issue for our test agent
     let missing_workspace_issues: Vec<_> = issues
         .iter()
-        .filter(|issue| matches!(
-            issue,
-            StateInconsistency::MissingWorkspace { agent_name } if agent_name == "test-agent"
-        ))
+        .filter(|issue| {
+            matches!(
+                issue,
+                StateInconsistency::MissingWorkspace { agent_name } if agent_name == "test-agent"
+            )
+        })
         .collect();
 
     assert_eq!(missing_workspace_issues.len(), 1);
@@ -139,13 +141,16 @@ async fn test_metadata_container_id_persistence() {
     save_agent_metadata(&config, &agent).unwrap();
 
     // Load metadata and verify container ID is preserved
-    // Note: Status is always Created when loaded, as actual status 
+    // Note: Status is always Created when loaded, as actual status
     // is determined dynamically via Docker API
     let loaded_agent =
         crowdcontrol_core::agent::load_agent_metadata(&config, "status-test").unwrap();
-    
+
     assert_eq!(loaded_agent.status, AgentStatus::Created);
-    assert_eq!(loaded_agent.container_id, Some("test-container-123".to_string()));
+    assert_eq!(
+        loaded_agent.container_id,
+        Some("test-container-123".to_string())
+    );
     assert_eq!(loaded_agent.name, "status-test");
 
     // Update to remove container ID (simulating container removal)

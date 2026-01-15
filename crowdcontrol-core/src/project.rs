@@ -144,7 +144,10 @@ impl ProjectStore {
     /// Load projects from file
     fn load(&self) -> Result<ProjectsFile> {
         if !self.path.exists() {
-            trace!("Projects file does not exist, returning empty: {:?}", self.path);
+            trace!(
+                "Projects file does not exist, returning empty: {:?}",
+                self.path
+            );
             return Ok(ProjectsFile::default());
         }
 
@@ -160,7 +163,11 @@ impl ProjectStore {
         let projects_file: ProjectsFile = toml::from_str(&contents)
             .with_context(|| format!("Failed to parse projects file: {:?}", self.path))?;
 
-        trace!("Loaded {} projects from {:?}", projects_file.projects.len(), self.path);
+        trace!(
+            "Loaded {} projects from {:?}",
+            projects_file.projects.len(),
+            self.path
+        );
         Ok(projects_file)
     }
 
@@ -180,12 +187,18 @@ impl ProjectStore {
             .create(true)
             .truncate(true)
             .open(&self.path)
-            .with_context(|| format!("Failed to open projects file for writing: {:?}", self.path))?;
+            .with_context(|| {
+                format!("Failed to open projects file for writing: {:?}", self.path)
+            })?;
 
         file.write_all(contents.as_bytes())
             .with_context(|| format!("Failed to write projects file: {:?}", self.path))?;
 
-        debug!("Saved {} projects to {:?}", projects_file.projects.len(), self.path);
+        debug!(
+            "Saved {} projects to {:?}",
+            projects_file.projects.len(),
+            self.path
+        );
         Ok(())
     }
 

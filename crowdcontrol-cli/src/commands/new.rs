@@ -27,9 +27,13 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
             let projects_path = get_projects_path();
             let store = ProjectStore::new(projects_path);
 
-            let project = store
-                .get(slug)?
-                .ok_or_else(|| anyhow!("Project '{}' not found. Add it with: crowdcontrol project add {} <url>", slug, slug))?;
+            let project = store.get(slug)?.ok_or_else(|| {
+                anyhow!(
+                    "Project '{}' not found. Add it with: crowdcontrol project add {} <url>",
+                    slug,
+                    slug
+                )
+            })?;
 
             // Use explicit branch arg, or project's default branch, or None
             let effective_branch = args.branch.or(project.default_branch);
@@ -79,8 +83,7 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
     let pb = create_progress_bar("Cloning repository...");
 
     // Wrap clone operation in a closure that handles cleanup on failure
-    let clone_result =
-        (|| clone_repository(&repository_url, &workspace_path, branch.as_deref()))();
+    let clone_result = (|| clone_repository(&repository_url, &workspace_path, branch.as_deref()))();
 
     pb.finish_and_clear();
 
