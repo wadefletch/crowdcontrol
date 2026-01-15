@@ -1,9 +1,9 @@
 # CrowdControl Configuration File
-# Place this file at ~/.config/crowdcontrol/config.toml
+# Place this file at ~/.crowdcontrol/config.toml
 
-# Directory for storing agent workspaces
-# Default: ~/crowdcontrol-workspaces
-# workspaces_dir = "~/crowdcontrol-workspaces"
+# Directory for storing agent data (workspaces, projects, metadata)
+# Default: ~/.crowdcontrol
+# workspaces_dir = "~/.crowdcontrol"
 
 # Docker image to use for agents
 # Default: crowdcontrol:latest

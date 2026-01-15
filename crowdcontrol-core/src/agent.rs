@@ -27,7 +27,6 @@ pub struct AgentMetadata {
 pub fn save_agent_metadata(config: &Config, agent: &Agent) -> Result<()> {
     let metadata_path = config
         .agent_workspace_path(&agent.name)
-        .join(".crowdcontrol")
         .join("metadata.json");
 
     debug!(
@@ -87,7 +86,7 @@ pub fn save_agent_metadata(config: &Config, agent: &Agent) -> Result<()> {
 
 pub fn load_agent_metadata(config: &Config, name: &str) -> Result<Agent> {
     let workspace_path = config.agent_workspace_path(name);
-    let metadata_path = workspace_path.join(".crowdcontrol").join("metadata.json");
+    let metadata_path = workspace_path.join("metadata.json");
 
     debug!(
         "Loading metadata for agent '{}' from {:?}",
@@ -147,15 +146,41 @@ pub fn list_all_agents(config: &Config) -> Result<Vec<String>> {
         return Ok(agents);
     }
 
+    // Walk the nested structure: ~/.crowdcontrol/<project>/<label>/ or ~/.crowdcontrol/<standalone>/
     for entry in fs::read_dir(&config.workspaces_dir)? {
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_dir() {
-            let metadata_path = path.join(".crowdcontrol").join("metadata.json");
-            if metadata_path.exists() {
-                if let Some(name) = path.file_name() {
-                    agents.push(name.to_string_lossy().to_string());
+        if !path.is_dir() {
+            continue;
+        }
+
+        // Skip special files like config.toml, projects.toml
+        let dir_name = match path.file_name() {
+            Some(name) => name.to_string_lossy().to_string(),
+            None => continue,
+        };
+
+        // Check for standalone agent (metadata.json directly in this dir)
+        let standalone_metadata = path.join("metadata.json");
+        if standalone_metadata.exists() {
+            agents.push(dir_name.clone());
+            continue;
+        }
+
+        // Check for project-based agents (subdirectories with metadata.json)
+        if let Ok(subdirs) = fs::read_dir(&path) {
+            for subentry in subdirs.flatten() {
+                let subpath = subentry.path();
+                if subpath.is_dir() {
+                    let nested_metadata = subpath.join("metadata.json");
+                    if nested_metadata.exists() {
+                        if let Some(label) = subpath.file_name() {
+                            // Agent name is "project-label" format
+                            let agent_name = format!("{}-{}", dir_name, label.to_string_lossy());
+                            agents.push(agent_name);
+                        }
+                    }
                 }
             }
         }
@@ -171,7 +196,7 @@ where
     F: FnOnce(&mut Agent) -> Result<()>,
 {
     let workspace_path = config.agent_workspace_path(name);
-    let metadata_path = workspace_path.join(".crowdcontrol").join("metadata.json");
+    let metadata_path = workspace_path.join("metadata.json");
 
     if !metadata_path.exists() {
         return Err(anyhow!("Agent '{}' not found", name));

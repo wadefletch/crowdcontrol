@@ -197,27 +197,14 @@ impl DockerClient {
             },
         ];
 
-        // Mount Claude config - both new and legacy formats
+        // Mount ~/.claude as read-only source for entrypoint to copy from
+        // (direct bind mount has ownership issues - files appear as wrong UID)
         let home_dir = dirs::home_dir().unwrap();
-
-        // Mount .claude directory if it exists
         let claude_dir = home_dir.join(".claude");
         if claude_dir.exists() {
             mounts.push(Mount {
-                target: Some("/mnt/claude-config/.claude".to_string()),
+                target: Some("/mnt/host-claude".to_string()),
                 source: Some(claude_dir.to_string_lossy().to_string()),
-                typ: Some(MountTypeEnum::BIND),
-                read_only: Some(true),
-                ..Default::default()
-            });
-        }
-
-        // Mount legacy .claude.json if it exists
-        let claude_legacy = home_dir.join(".claude.json");
-        if claude_legacy.exists() {
-            mounts.push(Mount {
-                target: Some("/mnt/claude-config/.claude.json".to_string()),
-                source: Some(claude_legacy.to_string_lossy().to_string()),
                 typ: Some(MountTypeEnum::BIND),
                 read_only: Some(true),
                 ..Default::default()

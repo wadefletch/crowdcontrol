@@ -45,13 +45,13 @@ impl Settings {
     /// Priority order (highest to lowest):
     /// 1. CLI arguments (handled by caller)
     /// 2. Environment variables (CROWDCONTROL_*)
-    /// 3. Config file (~/.config/crowdcontrol/config.toml)
+    /// 3. Config file (~/.crowdcontrol/config.toml)
     /// 4. Default values
     pub fn load() -> Result<Self> {
         debug!("Loading settings from configuration sources");
 
-        let config_path = dirs::config_dir()
-            .map(|p| p.join("crowdcontrol/config.toml"))
+        let config_path = dirs::home_dir()
+            .map(|p| p.join(".crowdcontrol/config.toml"))
             .filter(|p| p.exists());
 
         if let Some(ref path) = config_path {
@@ -118,7 +118,7 @@ impl Settings {
 fn default_workspaces_dir() -> PathBuf {
     dirs::home_dir()
         .expect("Unable to determine home directory")
-        .join("crowdcontrol-workspaces")
+        .join(".crowdcontrol")
 }
 
 fn default_image() -> String {

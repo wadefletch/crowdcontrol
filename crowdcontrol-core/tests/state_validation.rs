@@ -86,7 +86,6 @@ async fn test_detect_corrupted_metadata() {
     // Corrupt the metadata file
     let metadata_path = config
         .agent_workspace_path("corrupt-test")
-        .join(".crowdcontrol")
         .join("metadata.json");
     fs::write(&metadata_path, "{ invalid json").unwrap();
 

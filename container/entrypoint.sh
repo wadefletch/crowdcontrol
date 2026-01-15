@@ -18,11 +18,40 @@ if [ "$(id -u)" = "0" ]; then
     # Fix ownership of home directory
     find /home/developer -mindepth 1 -maxdepth 1 \
         -exec chown -R $USER_ID:$GROUP_ID {} \; 2>/dev/null || true
-    
+
     # Ensure home directory itself has correct ownership
     chown $USER_ID:$GROUP_ID /home/developer
-    
-    # Setup Claude Code authentication using the refresh script
+
+    # Copy Claude Code config from host mount (if available)
+    # Using cp -L to dereference symlinks (e.g., settings.json -> dotfiles)
+    if [ -d "/mnt/host-claude" ]; then
+        echo "Copying Claude Code configuration from host..."
+        mkdir -p /home/developer/.claude
+
+        # Copy credentials if they exist
+        if [ -f "/mnt/host-claude/.credentials.json" ]; then
+            cp -L /mnt/host-claude/.credentials.json /home/developer/.claude/.credentials.json 2>/dev/null || true
+        fi
+
+        # Copy settings if they exist (dereference symlinks)
+        if [ -f "/mnt/host-claude/settings.json" ]; then
+            cp -L /mnt/host-claude/settings.json /home/developer/.claude/settings.json 2>/dev/null || true
+        fi
+
+        # Copy other non-project-specific configs
+        for f in statsig.json CLAUDE.md; do
+            if [ -f "/mnt/host-claude/$f" ]; then
+                cp -L "/mnt/host-claude/$f" "/home/developer/.claude/$f" 2>/dev/null || true
+            fi
+        done
+
+        # Fix ownership of copied files
+        chown -R $USER_ID:$GROUP_ID /home/developer/.claude 2>/dev/null || true
+        chmod 600 /home/developer/.claude/.credentials.json 2>/dev/null || true
+        echo "Claude Code configuration copied"
+    fi
+
+    # Run refresh script for any additional setup (keychain extraction, etc.)
     /usr/local/bin/refresh-claude-auth.sh || echo "   (This is normal if Claude Code isn't configured on the host)"
     
     # Start docker daemon in background

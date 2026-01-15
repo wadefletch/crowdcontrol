@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{debug, trace};
 
 /// A project definition with a short slug mapping to a git URL
@@ -37,6 +37,15 @@ impl AgentIdentifier {
         match &self.project_slug {
             Some(slug) => format!("{}:{}", slug, self.label),
             None => self.label.clone(),
+        }
+    }
+
+    /// Convert to nested filesystem path within root directory
+    /// e.g., myapp:main -> root/myapp/main, standalone -> root/standalone
+    pub fn to_path(&self, root: &Path) -> PathBuf {
+        match &self.project_slug {
+            Some(slug) => root.join(slug).join(&self.label),
+            None => root.join(&self.label),
         }
     }
 }

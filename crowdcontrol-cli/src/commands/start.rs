@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -43,6 +43,25 @@ pub async fn execute(config: Config, args: StartArgs) -> Result<()> {
     pb.finish_and_clear();
 
     print_success(&format!("Agent '{}' started successfully", args.name));
+
+    // Auto-inject keychain credentials on macOS
+    if cfg!(target_os = "macos") {
+        // Wait briefly for container to initialize
+        sleep(Duration::from_secs(2)).await;
+
+        if let Ok(credentials) = extract_keychain_credentials() {
+            let container_name = format!("crowdcontrol-{}", agent.name);
+            let cmd = vec!["/usr/local/bin/refresh-claude-auth.sh", &credentials];
+            if docker
+                .exec_in_container(&container_name, cmd, false)
+                .await
+                .context("Failed to inject keychain credentials")
+                .is_ok()
+            {
+                print_success("Claude Code credentials injected from keychain");
+            }
+        }
+    }
 
     // Wait for initialization if requested
     if args.wait {

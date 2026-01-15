@@ -10,9 +10,9 @@ use crowdcontrol_core::{
 };
 
 fn get_projects_path() -> std::path::PathBuf {
-    dirs::config_dir()
-        .expect("Unable to determine config directory")
-        .join("crowdcontrol")
+    dirs::home_dir()
+        .expect("Unable to determine home directory")
+        .join(".crowdcontrol")
         .join("projects.toml")
 }
 
@@ -67,8 +67,8 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
     // Validate agent name
     validate_agent_name(&filesystem_name)?;
 
-    // Check if agent already exists
-    let workspace_path = config.agent_workspace_path(&filesystem_name);
+    // Construct workspace path using nested structure (project/label or standalone)
+    let workspace_path = identifier.to_path(&config.workspaces_dir);
     if workspace_path.exists() {
         return Err(anyhow!("Agent '{}' already exists", display_name));
     }
@@ -112,29 +112,64 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
         }
     }
 
+    // Helper to cleanup workspace on failure
+    let cleanup_workspace = |workspace: &std::path::Path| {
+        if let Err(cleanup_err) = fs::remove_dir_all(workspace) {
+            eprintln!(
+                "Warning: Failed to cleanup workspace directory after failure: {}",
+                cleanup_err
+            );
+        }
+    };
+
     // Create Docker client
-    let docker = DockerClient::new(config.clone())?;
+    let docker = match DockerClient::new(config.clone()) {
+        Ok(d) => d,
+        Err(e) => {
+            cleanup_workspace(&workspace_path);
+            return Err(e);
+        }
+    };
 
     // Check if container already exists
-    if docker
+    let container_exists = match docker
         .container_exists(&format!("crowdcontrol-{}", filesystem_name))
-        .await?
+        .await
     {
+        Ok(exists) => exists,
+        Err(e) => {
+            cleanup_workspace(&workspace_path);
+            return Err(e);
+        }
+    };
+
+    if container_exists {
         print_warning(&format!(
             "Container crowdcontrol-{} already exists",
             filesystem_name
         ));
     } else {
         // Pull image if needed
-        docker.pull_image().await?;
+        if let Err(e) = docker.pull_image().await {
+            cleanup_workspace(&workspace_path);
+            return Err(e);
+        }
 
         // Create container with defaults from config if not specified
         let pb = create_progress_bar("Creating container...");
         let memory = args.memory.or(config.default_memory.clone());
         let cpus = args.cpus.or(config.default_cpus.clone());
-        let container_id = docker
+        let container_id = match docker
             .create_container(&filesystem_name, &workspace_path, memory, cpus)
-            .await?;
+            .await
+        {
+            Ok(id) => id,
+            Err(e) => {
+                pb.finish_and_clear();
+                cleanup_workspace(&workspace_path);
+                return Err(e);
+            }
+        };
         pb.finish_and_clear();
         print_success("Container created successfully");
 
@@ -150,7 +185,10 @@ pub async fn execute(config: Config, args: NewArgs) -> Result<()> {
             project_slug,
         };
 
-        save_agent_metadata(&config, &agent)?;
+        if let Err(e) = save_agent_metadata(&config, &agent) {
+            cleanup_workspace(&workspace_path);
+            return Err(e);
+        }
     }
 
     print_success(&format!("Agent '{}' setup complete!", display_name));

@@ -113,8 +113,7 @@ fn test_legacy_metadata_loads_with_none_project_slug() -> Result<()> {
     let (config, _temp_dir) = create_test_config();
     let agent_name = "legacy-agent";
     let workspace_path = config.agent_workspace_path(agent_name);
-    let metadata_dir = workspace_path.join(".crowdcontrol");
-    fs::create_dir_all(&metadata_dir)?;
+    fs::create_dir_all(&workspace_path)?;
 
     // Write legacy metadata JSON without project_slug field
     let legacy_json = r#"{
@@ -126,7 +125,7 @@ fn test_legacy_metadata_loads_with_none_project_slug() -> Result<()> {
         "container_id": null
     }"#;
 
-    fs::write(metadata_dir.join("metadata.json"), legacy_json)?;
+    fs::write(workspace_path.join("metadata.json"), legacy_json)?;
 
     // Should load successfully with project_slug = None
     let loaded = load_agent_metadata(&config, agent_name)?;

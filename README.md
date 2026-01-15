@@ -133,18 +133,38 @@ CrowdControl supports configuration through multiple sources, with the following
 
 1. **Command-line arguments** - Override any other settings
 2. **Environment variables** - Use `CROWDCONTROL_` prefix
-3. **Config file** - `~/.config/crowdcontrol/config.toml`
+3. **Config file** - `~/.crowdcontrol/config.toml`
 4. **Default values**
+
+#### Storage Structure
+
+All CrowdControl data is stored under `~/.crowdcontrol/`:
+
+```
+~/.crowdcontrol/
+├── config.toml              # User configuration (optional)
+├── projects.toml            # Registered project definitions
+├── myapp/                   # Project directory
+│   ├── main/                # Agent "myapp:main"
+│   │   ├── metadata.json
+│   │   └── <repo files>
+│   └── feature/             # Agent "myapp:feature"
+│       ├── metadata.json
+│       └── <repo files>
+└── standalone-agent/        # Standalone agent (no project)
+    ├── metadata.json
+    └── <repo files>
+```
 
 #### Config File
 
-Create a configuration file at `~/.config/crowdcontrol/config.toml`:
+Create a configuration file at `~/.crowdcontrol/config.toml`:
 
-**Note**: Project definitions are stored separately at `~/.config/crowdcontrol/projects.toml` and managed via the `crowdcontrol project` commands.
+**Note**: Project definitions are stored at `~/.crowdcontrol/projects.toml` and managed via the `crowdcontrol project` commands.
 
 ```toml
-# Directory for storing agent workspaces
-workspaces_dir = "~/custom-workspaces"
+# Directory for storing agent data
+workspaces_dir = "~/.crowdcontrol"
 
 # Docker image to use for agents
 image = "crowdcontrol:custom"
@@ -161,13 +181,13 @@ See `config.example.toml` for a complete example.
 
 #### Environment Variables
 
-| Variable                      | Default                     | Description                            |
-| ----------------------------- | --------------------------- | -------------------------------------- |
-| `CROWDCONTROL_WORKSPACES_DIR` | `~/crowdcontrol-workspaces` | Directory for storing agent workspaces |
-| `CROWDCONTROL_IMAGE`          | `crowdcontrol:latest`       | Docker image to use for agents         |
-| `CROWDCONTROL_DEFAULT_MEMORY` | None                        | Default memory limit for agents        |
-| `CROWDCONTROL_DEFAULT_CPUS`   | None                        | Default CPU limit for agents           |
-| `NO_COLOR`                    | `false`                     | Disable colored output                 |
+| Variable                      | Default            | Description                            |
+| ----------------------------- | ------------------ | -------------------------------------- |
+| `CROWDCONTROL_WORKSPACES_DIR` | `~/.crowdcontrol`  | Directory for storing agent data       |
+| `CROWDCONTROL_IMAGE`          | `crowdcontrol:latest` | Docker image to use for agents      |
+| `CROWDCONTROL_DEFAULT_MEMORY` | None               | Default memory limit for agents        |
+| `CROWDCONTROL_DEFAULT_CPUS`   | None               | Default CPU limit for agents           |
+| `NO_COLOR`                    | `false`            | Disable colored output                 |
 
 ## Repository Configuration
 

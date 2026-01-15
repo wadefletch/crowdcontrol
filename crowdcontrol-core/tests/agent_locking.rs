@@ -58,7 +58,6 @@ fn test_metadata_has_comment() {
     // Read the raw JSON to verify comment field
     let metadata_path = config
         .agent_workspace_path("test-agent")
-        .join(".crowdcontrol")
         .join("metadata.json");
 
     let content = std::fs::read_to_string(metadata_path).unwrap();

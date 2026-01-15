@@ -57,9 +57,9 @@ pub enum OutputFormat {
 }
 
 fn get_projects_path() -> std::path::PathBuf {
-    dirs::config_dir()
-        .expect("Unable to determine config directory")
-        .join("crowdcontrol")
+    dirs::home_dir()
+        .expect("Unable to determine home directory")
+        .join(".crowdcontrol")
         .join("projects.toml")
 }
 
