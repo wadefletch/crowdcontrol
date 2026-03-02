@@ -1,5 +1,5 @@
 [workspace]
-members = ["crowdcontrol-core", "crowdcontrol-cli"]
+members = ["crowdcontrol-config", "crowdcontrol-core", "crowdcontrol-cli"]
 resolver = "2"
 
 # Optimized release profile

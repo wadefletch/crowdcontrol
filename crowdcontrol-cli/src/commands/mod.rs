@@ -1,6 +1,7 @@
 use clap::Args;
 
 pub mod completions;
+pub mod config;
 pub mod connect;
 pub mod doctor;
 pub mod list;
@@ -9,6 +10,7 @@ pub mod new;
 pub mod refresh;
 pub mod remove;
 pub mod start;
+pub mod status;
 pub mod stop;
 
 /// Arguments for the new command
@@ -51,6 +53,10 @@ pub struct StartArgs {
     /// Name of the agent to start
     #[arg(help = "Name of the agent to start")]
     pub name: String,
+
+    /// Git repository URL to clone if agent doesn't exist
+    #[arg(long, help = "Git repository URL to clone if agent doesn't exist (auto-creates agent)")]
+    pub repo: Option<String>,
 
     /// Wait for agent to be ready before returning
     #[arg(short, long, help = "Wait for agent initialization to complete")]
@@ -173,9 +179,12 @@ pub struct RefreshArgs {
     /// Name of the agent to refresh Claude Code authentication for
     #[arg(help = "Name of the agent to refresh Claude Code authentication for")]
     pub name: String,
-    
+
     /// Extract credentials from macOS keychain
-    #[arg(long, help = "Extract Claude Code credentials from macOS keychain (macOS only)")]
+    #[arg(
+        long,
+        help = "Extract Claude Code credentials from macOS keychain (macOS only)"
+    )]
     pub extract_keychain: bool,
 }
 

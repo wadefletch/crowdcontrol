@@ -33,7 +33,9 @@ impl CachedToken {
     }
 
     pub fn expires_in(&self) -> Duration {
-        self.expires_at.duration_since(SystemTime::now()).unwrap_or(Duration::ZERO)
+        self.expires_at
+            .duration_since(SystemTime::now())
+            .unwrap_or(Duration::ZERO)
     }
 }
 
@@ -72,9 +74,7 @@ impl GitHubConfig {
         let installation_token = env::var("GITHUB_INSTALLATION_TOKEN").ok();
         let app_id = env::var("GITHUB_APP_ID").ok();
         let installation_id = env::var("GITHUB_INSTALLATION_ID").ok();
-        let private_key_path = env::var("GITHUB_PRIVATE_KEY_PATH")
-            .ok()
-            .map(PathBuf::from);
+        let private_key_path = env::var("GITHUB_PRIVATE_KEY_PATH").ok().map(PathBuf::from);
         let base_url = env::var("GITHUB_BASE_URL").ok();
 
         // Return Some if any GitHub config is present
@@ -95,7 +95,11 @@ impl GitHubConfig {
     /// Validate the GitHub configuration
     pub fn validate(&self) -> Result<()> {
         // Must have either installation token or app credentials
-        match (&self.installation_token, &self.app_id, &self.installation_id) {
+        match (
+            &self.installation_token,
+            &self.app_id,
+            &self.installation_id,
+        ) {
             (Some(token), _, _) => {
                 if token.is_empty() {
                     return Err(anyhow!("GitHub installation token cannot be empty"));
@@ -142,7 +146,9 @@ impl GitHubConfig {
 
     /// Get the effective GitHub base URL (defaults to github.com)
     pub fn github_base_url(&self) -> String {
-        self.base_url.clone().unwrap_or_else(|| "https://github.com".to_string())
+        self.base_url
+            .clone()
+            .unwrap_or_else(|| "https://github.com".to_string())
     }
 
     /// Get an installation token, using cached token if available and not expired
@@ -214,15 +220,19 @@ impl GitHubConfig {
     pub fn get_git_config_commands(&self) -> Vec<String> {
         let base_url = self.github_base_url();
         let base_host = base_url.trim_start_matches("https://");
-        
+
         vec![
             // Configure git to use HTTPS instead of SSH (supports GitHub Enterprise)
-            format!("git config --global url.\"{}//\".insteadOf \"git@{}:\"", base_url, base_host),
+            format!(
+                "git config --global url.\"{}//\".insteadOf \"git@{}:\"",
+                base_url, base_host
+            ),
             // Set up credential helper
             "git config --global credential.helper store".to_string(),
             // Set CrowdControl as committer
             "git config --global user.name \"CrowdControl[bot]\"".to_string(),
-            "git config --global user.email \"crowdcontrol[bot]@users.noreply.github.com\"".to_string(),
+            "git config --global user.email \"crowdcontrol[bot]@users.noreply.github.com\""
+                .to_string(),
         ]
     }
 }
@@ -248,10 +258,13 @@ impl GitHubCredentialTemplate {
     ) -> Self {
         let base = base_url.unwrap_or_else(|| "https://github.com".to_string());
         let url_pattern = format!("{}/{}/*", base, organization);
-        
+
         Self {
             name: name.clone(),
-            description: Some(format!("GitHub App credentials for {} organization", organization)),
+            description: Some(format!(
+                "GitHub App credentials for {} organization",
+                organization
+            )),
             config,
             url_pattern,
         }
@@ -320,5 +333,282 @@ impl GitHubCredentialManager {
         // This could read from ~/.config/crowdcontrol/github-templates.toml
 
         manager
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_cached_token_lifecycle() {
+        // Test token creation and expiration
+        let token = CachedToken::new("test_token".to_string(), 1); // 1 minute
+
+        assert_eq!(token.token, "test_token");
+        assert!(!token.is_expired());
+        assert!(token.expires_in().as_secs() > 50); // Should be close to 60 seconds
+
+        // Test token with immediate expiration
+        let expired_token = CachedToken {
+            token: "expired".to_string(),
+            expires_at: SystemTime::now() - Duration::from_secs(1),
+        };
+
+        assert!(expired_token.is_expired());
+        assert_eq!(expired_token.expires_in(), Duration::ZERO);
+    }
+
+    #[test]
+    fn test_github_config_with_app_credentials() {
+        let temp_dir = TempDir::new().unwrap();
+        let key_path = temp_dir.path().join("test-key.pem");
+        std::fs::write(&key_path, "fake key content").unwrap();
+
+        let config = GitHubConfig::new_with_app_credentials(
+            "123456".to_string(),
+            "789012".to_string(),
+            key_path.clone(),
+            Some("https://github.enterprise.com".to_string()),
+        );
+
+        assert_eq!(config.app_id, Some("123456".to_string()));
+        assert_eq!(config.installation_id, Some("789012".to_string()));
+        assert_eq!(config.private_key_path, Some(key_path));
+        assert_eq!(
+            config.base_url,
+            Some("https://github.enterprise.com".to_string())
+        );
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_github_enterprise_base_url() {
+        let config = GitHubConfig::new_with_app_credentials(
+            "123456".to_string(),
+            "789012".to_string(),
+            PathBuf::from("/fake/path"), // Won't validate file existence in this test
+            Some("https://github.enterprise.com".to_string()),
+        );
+
+        assert_eq!(config.github_base_url(), "https://github.enterprise.com");
+
+        // Test default base URL
+        let default_config = GitHubConfig::new_with_installation_token("ghs_test".to_string());
+        assert_eq!(default_config.github_base_url(), "https://github.com");
+    }
+
+    #[test]
+    fn test_github_enterprise_git_commands() {
+        let config = GitHubConfig::new_with_app_credentials(
+            "123456".to_string(),
+            "789012".to_string(),
+            PathBuf::from("/fake/path"),
+            Some("https://github.enterprise.com".to_string()),
+        );
+
+        let commands = config.get_git_config_commands();
+
+        // Should configure for enterprise GitHub
+        assert!(commands
+            .iter()
+            .any(|cmd| cmd.contains("github.enterprise.com")));
+        assert!(commands.iter().any(|cmd| cmd.contains("CrowdControl[bot]")));
+    }
+
+    #[test]
+    fn test_github_config_validation_enhancements() {
+        // Test invalid app ID (non-numeric)
+        let mut config = GitHubConfig::new_with_installation_token("".to_string());
+        config.installation_token = None;
+        config.app_id = Some("not-a-number".to_string());
+        config.installation_id = Some("123456".to_string());
+
+        assert!(config.validate().is_err());
+
+        // Test invalid installation ID (non-numeric)
+        config.app_id = Some("123456".to_string());
+        config.installation_id = Some("not-a-number".to_string());
+
+        assert!(config.validate().is_err());
+
+        // Test invalid base URL
+        config.app_id = Some("123456".to_string());
+        config.installation_id = Some("789012".to_string());
+        config.base_url = Some("http://insecure.com".to_string()); // Should be HTTPS
+
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn test_github_env_vars_with_base_url() {
+        std::env::set_var("GITHUB_INSTALLATION_TOKEN", "ghs_test_token");
+        std::env::set_var("GITHUB_BASE_URL", "https://github.enterprise.com");
+
+        let config = GitHubConfig::from_env().unwrap();
+        let env_vars = config.to_container_env_vars();
+
+        assert!(env_vars.contains(&"GITHUB_INSTALLATION_TOKEN=ghs_test_token".to_string()));
+        assert!(env_vars.contains(&"GITHUB_BASE_URL=https://github.enterprise.com".to_string()));
+
+        std::env::remove_var("GITHUB_INSTALLATION_TOKEN");
+        std::env::remove_var("GITHUB_BASE_URL");
+    }
+
+    #[test]
+    fn test_credential_template_creation() {
+        let config = GitHubConfig::new_with_installation_token("ghs_test".to_string());
+
+        let template = GitHubCredentialTemplate::new_organization_template(
+            "acme-corp".to_string(),
+            "acme-corp".to_string(),
+            config,
+            None,
+        );
+
+        assert_eq!(template.name, "acme-corp");
+        assert_eq!(template.url_pattern, "https://github.com/acme-corp/*");
+        assert!(template.description.is_some());
+    }
+
+    #[test]
+    fn test_credential_template_url_matching() {
+        let config = GitHubConfig::new_with_installation_token("ghs_test".to_string());
+
+        let template = GitHubCredentialTemplate::new_organization_template(
+            "acme-corp".to_string(),
+            "acme-corp".to_string(),
+            config,
+            None,
+        );
+
+        // Should match organization repositories
+        assert!(template.matches_url("https://github.com/acme-corp/repo1"));
+        assert!(template.matches_url("https://github.com/acme-corp/some-project"));
+
+        // Should not match other organizations
+        assert!(!template.matches_url("https://github.com/other-org/repo"));
+        assert!(!template.matches_url("https://github.com/acme-corp-fake/repo"));
+    }
+
+    #[test]
+    fn test_credential_manager() {
+        let mut manager = GitHubCredentialManager::new();
+
+        // Add default config
+        let default_config = GitHubConfig::new_with_installation_token("ghs_default".to_string());
+        manager.default_config = Some(default_config);
+
+        // Add organization template
+        let org_config = GitHubConfig::new_with_installation_token("ghs_org".to_string());
+        let template = GitHubCredentialTemplate::new_organization_template(
+            "acme-corp".to_string(),
+            "acme-corp".to_string(),
+            org_config,
+            None,
+        );
+        manager.add_template(template);
+
+        // Test template matching
+        let config = manager.get_config_for_url("https://github.com/acme-corp/repo");
+        assert!(config.is_some());
+        assert_eq!(
+            config.unwrap().installation_token.as_ref().unwrap(),
+            "ghs_org"
+        );
+
+        // Test fallback to default
+        let config = manager.get_config_for_url("https://github.com/other-org/repo");
+        assert!(config.is_some());
+        assert_eq!(
+            config.unwrap().installation_token.as_ref().unwrap(),
+            "ghs_default"
+        );
+
+        // Test no config found
+        manager.default_config = None;
+        let config = manager.get_config_for_url("https://github.com/other-org/repo");
+        assert!(config.is_none());
+    }
+
+    #[test]
+    fn test_credential_manager_from_env() {
+        std::env::set_var("GITHUB_INSTALLATION_TOKEN", "ghs_from_env");
+
+        let manager = GitHubCredentialManager::from_env_and_config();
+        assert!(manager.default_config.is_some());
+        assert_eq!(
+            manager.default_config.unwrap().installation_token.unwrap(),
+            "ghs_from_env"
+        );
+
+        std::env::remove_var("GITHUB_INSTALLATION_TOKEN");
+    }
+
+    #[test]
+    fn test_github_config_creation() {
+        // Test creating GitHub config with installation token
+        let config = GitHubConfig::new_with_installation_token("ghs_test_token".to_string());
+
+        assert_eq!(
+            config.installation_token,
+            Some("ghs_test_token".to_string())
+        );
+        assert_eq!(config.app_id, None);
+        assert_eq!(config.installation_id, None);
+        assert_eq!(config.private_key_path, None);
+    }
+
+    #[test]
+    fn test_github_config_validation() {
+        // Test that GitHub config validates required fields
+        let valid_config = GitHubConfig::new_with_installation_token("ghs_valid_token".to_string());
+        assert!(valid_config.validate().is_ok());
+
+        // Test empty token fails validation
+        let invalid_config = GitHubConfig::new_with_installation_token("".to_string());
+        assert!(invalid_config.validate().is_err());
+
+        // Test invalid token format fails validation
+        let invalid_format = GitHubConfig::new_with_installation_token("invalid_token".to_string());
+        assert!(invalid_format.validate().is_err());
+    }
+
+    #[test]
+    fn test_github_config_environment_variables() {
+        // Test that GitHub config can be created from environment variables
+        std::env::set_var("GITHUB_INSTALLATION_TOKEN", "ghs_env_token");
+
+        let config = GitHubConfig::from_env().unwrap();
+        assert_eq!(config.installation_token, Some("ghs_env_token".to_string()));
+
+        std::env::remove_var("GITHUB_INSTALLATION_TOKEN");
+    }
+
+    #[test]
+    fn test_github_config_missing_env_vars() {
+        // Test that missing environment variables return None
+        std::env::remove_var("GITHUB_INSTALLATION_TOKEN");
+        std::env::remove_var("GITHUB_APP_ID");
+        std::env::remove_var("GITHUB_INSTALLATION_ID");
+
+        let config = GitHubConfig::from_env();
+        assert!(config.is_none());
+    }
+
+    #[test]
+    fn test_github_config_container_env_vars() {
+        let config = GitHubConfig::new_with_installation_token("ghs_test_token".to_string());
+
+        let env_vars = config.to_container_env_vars();
+
+        assert!(env_vars.contains(&"GITHUB_INSTALLATION_TOKEN=ghs_test_token".to_string()));
+        assert!(env_vars
+            .iter()
+            .any(|var| var.starts_with("GITHUB_USER_NAME=")));
+        assert!(env_vars
+            .iter()
+            .any(|var| var.starts_with("GITHUB_USER_EMAIL=")));
     }
 }

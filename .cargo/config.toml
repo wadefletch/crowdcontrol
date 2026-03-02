@@ -1,8 +1,14 @@
 # Cargo configuration for CrowdControl project
 
 [alias]
-# Run only the Docker integration tests (requires Docker)
-test-integration = "test --test integration_test -- --ignored --test-threads=1"
+# Run unit tests only (fast, no external dependencies)
+test-unit = "test --lib"
 
-# Run all Docker-dependent tests including user journey tests (requires Docker)
-test-docker = "test -- --ignored --test-threads=1"
+# Run CLI black-box tests (requires Docker and cargo-bin)
+test-cli = "test --package crowdcontrol-cli -- --ignored"
+
+# Run all tests including Docker-dependent ones
+test-all = "test -- --ignored"
+
+# Run tests without Docker dependency
+test-fast = "test --lib"
