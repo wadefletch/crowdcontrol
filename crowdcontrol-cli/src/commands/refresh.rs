@@ -3,7 +3,7 @@ use std::process::Command;
 
 use crate::commands::RefreshArgs;
 use crate::utils::*;
-use crowdcontrol_core::{Config, DockerClient, load_agent_metadata};
+use crowdcontrol_core::{load_agent_metadata, Config, DockerClient};
 
 pub async fn execute(config: Config, args: RefreshArgs) -> Result<()> {
     // Load agent metadata
@@ -37,7 +37,9 @@ pub async fn execute(config: Config, args: RefreshArgs) -> Result<()> {
             docker
                 .exec_in_container(&container_name, cmd, false)
                 .await
-                .context("Failed to refresh Claude Code authentication with keychain credentials")?;
+                .context(
+                    "Failed to refresh Claude Code authentication with keychain credentials",
+                )?;
         } else {
             print_warning("--extract-keychain flag is only supported on macOS");
             return Ok(());
@@ -63,14 +65,16 @@ pub async fn execute(config: Config, args: RefreshArgs) -> Result<()> {
 #[cfg(target_os = "macos")]
 fn extract_keychain_credentials() -> Result<String> {
     print_info("Extracting Claude Code credentials from macOS keychain...");
-    
+
     // Try to extract credentials from keychain
     let output = Command::new("security")
         .args(&[
             "find-generic-password",
-            "-s", "Claude Code-credentials",
-            "-a", &whoami::username(),
-            "-w"
+            "-s",
+            "Claude Code-credentials",
+            "-a",
+            &whoami::username(),
+            "-w",
         ])
         .output()
         .context("Failed to execute security command")?;
@@ -91,7 +95,7 @@ fn extract_keychain_credentials() -> Result<String> {
     }
 
     print_success("Keychain credentials extracted successfully");
-    
+
     Ok(credentials)
 }
 

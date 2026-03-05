@@ -5,7 +5,8 @@ mod commands;
 mod utils;
 
 use commands::*;
-use crowdcontrol_core::{init_logger, Config, Settings};
+use crowdcontrol_core::{init_logger, Loader};
+use serde::Serialize;
 
 /// CrowdControl: Containerized development environments with Claude Code
 #[derive(Parser)]
@@ -32,7 +33,7 @@ pub struct GlobalOptions {
     /// Custom workspaces directory
     #[arg(
         long,
-        env = "CROWDCONTROL_WORKSPACES_DIR",
+        env = "CC_WORKSPACES_DIR",
         global = true,
         help = "Directory for storing agent workspaces"
     )]
@@ -41,7 +42,7 @@ pub struct GlobalOptions {
     /// Custom container image name
     #[arg(
         long,
-        env = "CROWDCONTROL_IMAGE",
+        env = "CC_IMAGE",
         global = true,
         help = "Docker image to use for agents"
     )]
@@ -68,6 +69,9 @@ enum Commands {
     /// Create a new agent from a git repository
     New(NewArgs),
 
+    /// Create a new agent from a git repository (alias for new)
+    Setup(NewArgs),
+
     /// Start an existing agent
     Start(StartArgs),
 
@@ -88,6 +92,12 @@ enum Commands {
 
     /// Refresh Claude Code authentication for an agent
     Refresh(RefreshArgs),
+
+    /// Show or manage configuration
+    Config(config::ConfigCommand),
+
+    /// Show detailed status for a specific agent
+    Status(status::StatusCommand),
 
     /// Generate shell completions
     Completions(CompletionsArgs),
@@ -112,19 +122,39 @@ async fn main() -> anyhow::Result<()> {
         colored::control::set_override(false);
     }
 
-    // Load settings with CLI overrides
-    let settings = Settings::with_overrides(
-        cli.global.workspaces_dir,
-        cli.global.image,
-        cli.global.verbose,
-    )?;
+    // Create CLI overrides struct
+    #[derive(Serialize)]
+    struct CliOverrides {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        workspaces_dir: Option<PathBuf>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        image: Option<String>,
+        verbose: u8,
+    }
 
-    // Create config from settings
-    let config = Config::from_settings(settings)?;
+    let overrides = CliOverrides {
+        workspaces_dir: cli.global.workspaces_dir,
+        image: cli.global.image,
+        verbose: cli.global.verbose,
+    };
+
+    // Load configuration with overrides
+    let mut loader = Loader::new();
+    if let Ok(config_file) = std::env::var("CC_CONFIG_FILE") {
+        loader = loader.config_file(config_file);
+    }
+    
+    let mut config = loader
+        .merge(&overrides)
+        .load()?;
+    
+    // Validate the configuration
+    config.validate()?;
 
     // Execute the appropriate command
     match cli.command {
         Commands::New(args) => new::execute(config, args).await,
+        Commands::Setup(args) => new::execute(config, args).await, // Alias for new
         Commands::Start(args) => start::execute(config, args).await,
         Commands::Stop(args) => stop::execute(config, args).await,
         Commands::Connect(args) => connect::execute(config, args).await,
@@ -132,6 +162,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::Remove(args) => remove::execute(config, args).await,
         Commands::Logs(args) => logs::execute(config, args).await,
         Commands::Refresh(args) => refresh::execute(config, args).await,
+        Commands::Config(args) => config::execute(config, args).await,
+        Commands::Status(args) => status::execute(config, args).await,
         Commands::Completions(args) => completions::execute(config, args).await,
         Commands::Doctor(args) => doctor::execute(config, args).await,
     }

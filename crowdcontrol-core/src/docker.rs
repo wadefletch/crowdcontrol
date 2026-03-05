@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Context, Result};
 use bollard::container::{
-    Config as ContainerConfig, CreateContainerOptions, InspectContainerOptions, ListContainersOptions, LogsOptions,
-    RemoveContainerOptions, StartContainerOptions, StopContainerOptions,
+    Config as ContainerConfig, CreateContainerOptions, InspectContainerOptions,
+    ListContainersOptions, LogsOptions, RemoveContainerOptions, StartContainerOptions,
+    StopContainerOptions,
 };
 use bollard::exec::{CreateExecOptions, StartExecResults};
 use bollard::image::CreateImageOptions;
@@ -39,16 +40,38 @@ pub enum AgentStatus {
 impl Agent {
     /// Compute the current live status from Docker.
     /// This is the single source of truth for agent status.
+    ///
+    /// ## Critical Stale Container Detection
+    /// Container IDs can become "stale" in several scenarios:
+    /// - Container was manually removed outside of crowdcontrol
+    /// - Docker daemon was restarted and containers were auto-removed
+    /// - Container was replaced but metadata wasn't updated
+    /// - Container ID was corrupted or points to wrong container
+    ///
+    /// ## Why Validation is Essential
+    /// Without validation, we could:
+    /// - Try to operate on non-existent containers (causing errors)
+    /// - Operate on wrong containers (security risk)
+    /// - Show incorrect status information to users
+    /// - Fail to detect that a new container needs to be created
+    ///
+    /// ## Recovery Strategy
+    /// When a stale container ID is detected, we return `AgentStatus::Created`
+    /// rather than `Error`. This allows the system to automatically recover
+    /// by creating a new container when the user tries to start the agent.
     pub async fn compute_live_status(&self, docker: &DockerClient) -> Result<AgentStatus> {
         match &self.container_id {
             None => Ok(AgentStatus::Created),
             Some(container_id) => {
                 // First validate the container ID is still valid for this agent
-                if !docker.validate_container_id(&self.name, container_id).await? {
+                if !docker
+                    .validate_container_id(&self.name, container_id)
+                    .await?
+                {
                     // Container ID is stale, agent is effectively Created
                     return Ok(AgentStatus::Created);
                 }
-                
+
                 // Get live status from Docker
                 docker.get_container_status(&self.name).await
             }
@@ -138,6 +161,17 @@ impl DockerClient {
         memory: Option<String>,
         cpus: Option<String>,
     ) -> Result<String> {
+        self.create_container_with_github(name, workspace_path, memory, cpus)
+            .await
+    }
+
+    pub async fn create_container_with_github(
+        &self,
+        name: &str,
+        workspace_path: &PathBuf,
+        memory: Option<String>,
+        cpus: Option<String>,
+    ) -> Result<String> {
         let container_name = format!("crowdcontrol-{}", name);
 
         info!(
@@ -166,7 +200,7 @@ impl DockerClient {
 
         // Mount Claude config - both new and legacy formats
         let home_dir = dirs::home_dir().unwrap();
-        
+
         // Mount .claude directory if it exists
         let claude_dir = home_dir.join(".claude");
         if claude_dir.exists() {
@@ -178,7 +212,7 @@ impl DockerClient {
                 ..Default::default()
             });
         }
-        
+
         // Mount legacy .claude.json if it exists
         let claude_legacy = home_dir.join(".claude.json");
         if claude_legacy.exists() {
@@ -190,7 +224,6 @@ impl DockerClient {
                 ..Default::default()
             });
         }
-        
 
         let mut host_config = HostConfig {
             privileged: Some(true),
@@ -216,14 +249,22 @@ impl DockerClient {
 
         let mut labels = HashMap::new();
         labels.insert("app".to_string(), "crowdcontrol".to_string());
-        
+
+        // Prepare environment variables
+        let mut env_vars = vec![
+            format!("HOST_UID={}", user_id),
+            format!("HOST_GID={}", group_id),
+        ];
+
+        // Add GitHub environment variables if configured
+        if let Some(github_config) = &self.config.github {
+            env_vars.extend(github_config.to_container_env_vars());
+        }
+
         let container_config = ContainerConfig {
             image: Some(self.config.image.clone()),
             host_config: Some(host_config),
-            env: Some(vec![
-                format!("HOST_UID={}", user_id),
-                format!("HOST_GID={}", group_id),
-            ]),
+            env: Some(env_vars),
             labels: Some(labels),
             ..Default::default()
         };
@@ -287,7 +328,8 @@ impl DockerClient {
         cmd: Vec<&str>,
         attach: bool,
     ) -> Result<()> {
-        self.exec_in_container_as_user(container_id, cmd, attach, None).await
+        self.exec_in_container_as_user(container_id, cmd, attach, None)
+            .await
     }
 
     pub async fn exec_in_container_as_user(
@@ -445,11 +487,43 @@ impl DockerClient {
     }
 
     /// Validate that a container ID actually belongs to the specified agent
-    pub async fn validate_container_id(&self, agent_name: &str, container_id: &str) -> Result<bool> {
+    ///
+    /// ## Why This Validation is Critical
+    /// Container IDs can become stale or mismatched in several ways:
+    /// - User manually removes container: `docker rm <container>`
+    /// - Docker daemon restart with auto-cleanup policies
+    /// - Container name conflicts (rare but possible)
+    /// - Metadata corruption pointing to wrong container
+    ///
+    /// ## Validation Strategy
+    /// Rather than just checking if the container exists, we verify:
+    /// 1. Container ID exists and is inspectable
+    /// 2. Container name matches expected pattern: `crowdcontrol-{agent_name}`
+    /// 3. Container belongs to our agent (not someone else's container)
+    ///
+    /// ## Security Consideration
+    /// Without name validation, a malicious user could potentially:
+    /// - Point agent metadata to system containers
+    /// - Cause crowdcontrol to operate on unrelated containers
+    /// - Bypass isolation between different agents
+    ///
+    /// ## Failure Mode: Fail Safe
+    /// If validation fails (container doesn't exist, wrong name, etc.),
+    /// we return `false` rather than erroring. This allows the system
+    /// to gracefully handle stale references and create new containers.
+    pub async fn validate_container_id(
+        &self,
+        agent_name: &str,
+        container_id: &str,
+    ) -> Result<bool> {
         let expected_container_name = format!("crowdcontrol-{}", agent_name);
-        
+
         // Get container details
-        match self.docker.inspect_container(container_id, None::<InspectContainerOptions>).await {
+        match self
+            .docker
+            .inspect_container(container_id, None::<InspectContainerOptions>)
+            .await
+        {
             Ok(container) => {
                 // Check if container name matches expected agent name
                 if let Some(name) = container.name {

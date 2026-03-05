@@ -25,6 +25,9 @@ if [ "$(id -u)" = "0" ]; then
     # Setup Claude Code authentication using the refresh script
     /usr/local/bin/refresh-claude-auth.sh || echo "   (This is normal if Claude Code isn't configured on the host)"
     
+    # Setup GitHub authentication if configured
+    /usr/local/bin/setup-github-auth.sh || echo "   (This is normal if GitHub isn't configured)"
+    
     # Start docker daemon in background
     dockerd &
     
@@ -62,9 +65,9 @@ REPO_NAME=$(basename "$REPO_DIR")
 echo "Working in: $REPO_DIR"
 
 # Export environment variables for scripts
-export CROWDCONTROL_REPO_PATH="$REPO_DIR"
-export CROWDCONTROL_REPO_NAME="$REPO_NAME"
-export CROWDCONTROL_WORKSPACE="/workspace"
+export CC_REPO_PATH="$REPO_DIR"
+export CC_REPO_NAME="$REPO_NAME"
+export CC_WORKSPACE="/workspace"
 
 # Set Claude config directory to home
 export CLAUDE_CONFIG_DIR="/home/developer"

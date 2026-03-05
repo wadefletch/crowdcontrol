@@ -7,6 +7,9 @@ use std::thread;
 use std::time::Duration;
 use tempfile::TempDir;
 
+mod test_utils;
+use test_utils::generate_test_id;
+
 // Test helper functions
 fn crowdcontrol_cmd_with_temp() -> (Command, TempDir) {
     let temp_dir = TempDir::new().unwrap();
@@ -62,23 +65,25 @@ fn test_developer_workflow_multiple_features() {
 
     // Scenario: Developer working on multiple features simultaneously
     // 1. Setup main branch agent
+    let main_agent = generate_test_id("app-main");
     cmd.args(&[
         "new",
-        "app-main",
+        &main_agent,
         "https://github.com/octocat/Hello-World.git",
     ])
     .assert()
     .success()
     .stdout(predicates::str::contains(
-        "Successfully set up agent 'app-main'",
+        &format!("Successfully set up agent '{}'", main_agent),
     ));
 
     // 2. Setup feature branch agent
+    let feature_agent = generate_test_id("app-feature-auth");
     let (mut cmd, _temp2) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", _temp.path())
         .args(&[
             "new",
-            "app-feature-auth",
+            &feature_agent,
             "https://github.com/octocat/Hello-World.git",
             "--branch",
             "test",
@@ -92,26 +97,26 @@ fn test_developer_workflow_multiple_features() {
         .arg("list")
         .assert()
         .success()
-        .stdout(predicates::str::contains("app-main"))
-        .stdout(predicates::str::contains("app-feature-auth"))
+        .stdout(predicates::str::contains(&main_agent))
+        .stdout(predicates::str::contains(&feature_agent))
         .stdout(predicates::str::contains("Created"));
 
     // 4. Start main branch agent
     let (mut cmd, _temp4) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", _temp.path())
-        .args(&["start", "app-main"])
+        .args(&["start", &main_agent])
         .assert()
         .success();
 
     // Wait for container to be running
-    assert!(wait_for_container_state("app-main", "running", 10));
+    assert!(wait_for_container_state(&main_agent, "running", 10));
 
     // 5. Start feature branch agent with resource limits
     let (mut cmd, _temp5) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", _temp.path())
         .args(&[
             "start",
-            "app-feature-auth",
+            &feature_agent,
             "--memory",
             "512m",
             "--cpus",
@@ -120,7 +125,7 @@ fn test_developer_workflow_multiple_features() {
         .assert()
         .success();
 
-    assert!(wait_for_container_state("app-feature-auth", "running", 10));
+    assert!(wait_for_container_state(&feature_agent, "running", 10));
 
     // 6. List agents - both should be running
     let (mut cmd, _temp6) = crowdcontrol_cmd_with_temp();
@@ -133,14 +138,14 @@ fn test_developer_workflow_multiple_features() {
     // 7. Get logs from feature branch
     let (mut cmd, _temp7) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", _temp.path())
-        .args(&["logs", "app-feature-auth", "--tail", "5"])
+        .args(&["logs", &feature_agent, "--tail", "5"])
         .assert()
         .success();
 
     // 8. Stop feature branch when done
     let (mut cmd, _temp8) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", _temp.path())
-        .args(&["stop", "app-feature-auth"])
+        .args(&["stop", &feature_agent])
         .assert()
         .success();
 
@@ -153,13 +158,13 @@ fn test_developer_workflow_multiple_features() {
 
     let (mut cmd, _temp10) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", _temp.path())
-        .args(&["remove", "app-main", "--force"])
+        .args(&["remove", &main_agent, "--force"])
         .assert()
         .success();
 
     let (mut cmd, _temp11) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", _temp.path())
-        .args(&["remove", "app-feature-auth", "--force"])
+        .args(&["remove", &feature_agent, "--force"])
         .assert()
         .success();
 }
@@ -176,10 +181,14 @@ fn test_resource_constrained_workflow() {
 
     // Scenario: Developer with limited resources juggling multiple projects
     // Setup 3 agents for different projects
+    let frontend_agent = generate_test_id("project-frontend");
+    let backend_agent = generate_test_id("project-backend");
+    let database_agent = generate_test_id("project-database");
+    
     let projects = vec![
-        ("project-frontend", "512m", "0.5"),
-        ("project-backend", "1g", "1"),
-        ("project-database", "2g", "1"),
+        (&frontend_agent, "512m", "0.5"),
+        (&backend_agent, "1g", "1"),
+        (&database_agent, "2g", "1"),
     ];
 
     for (name, memory, cpus) in &projects {
@@ -201,11 +210,11 @@ fn test_resource_constrained_workflow() {
     // Start only the frontend initially
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", temp.path())
-        .args(&["start", "project-frontend"])
+        .args(&["start", &frontend_agent])
         .assert()
         .success();
 
-    assert!(wait_for_container_state("project-frontend", "running", 10));
+    assert!(wait_for_container_state(&frontend_agent, "running", 10));
 
     // List to verify only frontend is running
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
@@ -225,17 +234,17 @@ fn test_resource_constrained_workflow() {
     // Switch to backend - stop frontend, start backend
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", temp.path())
-        .args(&["stop", "project-frontend"])
+        .args(&["stop", &frontend_agent])
         .assert()
         .success();
 
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", temp.path())
-        .args(&["start", "project-backend"])
+        .args(&["start", &backend_agent])
         .assert()
         .success();
 
-    assert!(wait_for_container_state("project-backend", "running", 10));
+    assert!(wait_for_container_state(&backend_agent, "running", 10));
 
     // Clean up
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
@@ -323,12 +332,15 @@ fn test_concurrent_operations_stress() {
 
     // Setup multiple agents
     let agent_count = 5;
+    let mut stress_agents = Vec::new();
     for i in 0..agent_count {
+        let agent_name = generate_test_id(&format!("stress-{}", i));
+        stress_agents.push(agent_name.clone());
         let (mut cmd, _) = crowdcontrol_cmd_with_temp();
         cmd.env("CROWDCONTROL_WORKSPACES_DIR", &workspace_path)
             .args(&[
                 "new",
-                &format!("stress-test-{}", i),
+                &agent_name,
                 "https://github.com/octocat/Hello-World.git",
             ])
             .assert()
@@ -336,13 +348,14 @@ fn test_concurrent_operations_stress() {
     }
 
     // Start all agents concurrently
-    let handles: Vec<_> = (0..agent_count)
-        .map(|i| {
+    let handles: Vec<_> = stress_agents.iter()
+        .map(|agent_name| {
             let workspace = workspace_path.clone();
+            let name = agent_name.clone();
             thread::spawn(move || {
                 let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
                 cmd.env("CROWDCONTROL_WORKSPACES_DIR", workspace)
-                    .args(&["start", &format!("stress-test-{}", i)])
+                    .args(&["start", &name])
                     .assert()
                     .success();
             })
@@ -380,10 +393,10 @@ fn test_concurrent_operations_stress() {
         .success();
 
     // Clean up
-    for i in 0..agent_count {
+    for agent_name in &stress_agents {
         let mut cmd = Command::cargo_bin("crowdcontrol").unwrap();
         cmd.env("CROWDCONTROL_WORKSPACES_DIR", &workspace_path)
-            .args(&["remove", &format!("stress-test-{}", i), "--force"])
+            .args(&["remove", agent_name, "--force"])
             .assert()
             .success();
     }
@@ -448,10 +461,11 @@ fn test_workspace_persistence_across_restarts() {
     let workspace_path = temp.path();
 
     // Setup and start an agent
+    let persistence_agent = generate_test_id("persistence-test");
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", workspace_path)
         .args(&[
             "new",
-            "persistence-test",
+            &persistence_agent,
             "https://github.com/octocat/Hello-World.git",
         ])
         .assert()
@@ -459,14 +473,14 @@ fn test_workspace_persistence_across_restarts() {
 
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", workspace_path)
-        .args(&["start", "persistence-test"])
+        .args(&["start", &persistence_agent])
         .assert()
         .success();
 
-    assert!(wait_for_container_state("persistence-test", "running", 10));
+    assert!(wait_for_container_state(&persistence_agent, "running", 10));
 
     // Create a test file in the workspace
-    let agent_workspace = workspace_path.join("persistence-test");
+    let agent_workspace = workspace_path.join(&persistence_agent);
     let test_file = agent_workspace.join("test-data.txt");
     fs::write(&test_file, "Important data that should persist").unwrap();
 
@@ -478,7 +492,7 @@ fn test_workspace_persistence_across_restarts() {
     // Stop the agent
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", workspace_path)
-        .args(&["stop", "persistence-test"])
+        .args(&["stop", &persistence_agent])
         .assert()
         .success();
 
@@ -493,11 +507,11 @@ fn test_workspace_persistence_across_restarts() {
     // Start agent again
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", workspace_path)
-        .args(&["start", "persistence-test"])
+        .args(&["start", &persistence_agent])
         .assert()
         .success();
 
-    assert!(wait_for_container_state("persistence-test", "running", 10));
+    assert!(wait_for_container_state(&persistence_agent, "running", 10));
 
     // Files should still be there
     assert!(test_file.exists());
@@ -506,13 +520,13 @@ fn test_workspace_persistence_across_restarts() {
     // Clean up
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", workspace_path)
-        .args(&["stop", "persistence-test"])
+        .args(&["stop", &persistence_agent])
         .assert()
         .success();
 
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", workspace_path)
-        .args(&["remove", "persistence-test", "--force"])
+        .args(&["remove", &persistence_agent, "--force"])
         .assert()
         .success();
 }
@@ -523,10 +537,11 @@ fn test_metadata_file_integrity() {
     let (mut cmd, temp) = crowdcontrol_cmd_with_temp();
 
     // Setup an agent
+    let metadata_agent = generate_test_id("metadata-test");
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", temp.path())
         .args(&[
             "new",
-            "metadata-test",
+            &metadata_agent,
             "https://github.com/octocat/Hello-World.git",
             "--branch",
             "test",
@@ -537,7 +552,7 @@ fn test_metadata_file_integrity() {
     // Read and verify metadata
     let metadata_path = temp
         .path()
-        .join("metadata-test")
+        .join(&metadata_agent)
         .join(".crowdcontrol")
         .join("metadata.json");
 
@@ -547,7 +562,7 @@ fn test_metadata_file_integrity() {
     let metadata: Value = serde_json::from_str(&metadata_content).unwrap();
 
     // Verify required fields
-    assert_eq!(metadata["name"], "metadata-test");
+    assert_eq!(metadata["name"], metadata_agent);
     assert_eq!(
         metadata["repository"],
         "https://github.com/octocat/Hello-World.git"
@@ -580,7 +595,7 @@ fn test_metadata_file_integrity() {
     // Clean up
     let (mut cmd, _) = crowdcontrol_cmd_with_temp();
     cmd.env("CROWDCONTROL_WORKSPACES_DIR", temp.path())
-        .args(&["remove", "metadata-test", "--force"])
+        .args(&["remove", &metadata_agent, "--force"])
         .assert()
         .success();
 }

@@ -1,0 +1,359 @@
+---
+id: configuration
+title: Configuration
+---
+
+crowdcontrol is configured through a combination of configuration files, environment variables, and command-line options.
+
+## Configuration File
+
+crowdcontrol reads configuration from `~/.config/crowdcontrol/config.toml`.
+
+## Core Settings
+
+Settings related to the core functionality of crowdcontrol.
+
+### core.workspaces_dir
+
+Directory for storing agent workspaces.
+
+| Default                     | Config Override                                       | Environment Override                         |
+| --------------------------- | ----------------------------------------------------- | -------------------------------------------- |
+| `~/crowdcontrol-workspaces` | `[core]`<br/>`workspaces_dir = "/path/to/workspaces"` | `CC_CORE_WORKSPACES_DIR=/path/to/workspaces` |
+
+### core.default_branch
+
+Default git branch when cloning repositories.
+
+| Default            | Config Override                        | Environment Override          |
+| ------------------ | -------------------------------------- | ----------------------------- |
+| Repository default | `[core]`<br/>`default_branch = "main"` | `CC_CORE_DEFAULT_BRANCH=main` |
+
+## Resource Settings
+
+Settings for resource limits and allocation.
+
+### resources.default_memory
+
+Default memory limit for new agents.
+
+Valid formats: `<number><unit>` where unit is `b`, `k`, `m`, or `g`.
+
+| Default | Config Override                           | Environment Override             |
+| ------- | ----------------------------------------- | -------------------------------- |
+| None    | `[resources]`<br/>`default_memory = "2g"` | `CC_RESOURCES_DEFAULT_MEMORY=2g` |
+
+### resources.default_cpus
+
+Default CPU limit for new agents.
+
+Valid format: Decimal number.
+
+| Default | Config Override                          | Environment Override            |
+| ------- | ---------------------------------------- | ------------------------------- |
+| None    | `[resources]`<br/>`default_cpus = "1.5"` | `CC_RESOURCES_DEFAULT_CPUS=1.5` |
+
+## Docker Settings
+
+Docker-related configuration.
+
+### docker.image
+
+Docker image to use for agents.
+
+| Default               | Config Override                                | Environment Override                  |
+| --------------------- | ---------------------------------------------- | ------------------------------------- |
+| `crowdcontrol:latest` | `[docker]`<br/>`image = "crowdcontrol:v1.0.0"` | `CC_DOCKER_IMAGE=crowdcontrol:v1.0.0` |
+
+### docker.host
+
+Docker daemon connection.
+
+| Default        | Config Override                                    | Environment Override                      |
+| -------------- | -------------------------------------------------- | ----------------------------------------- |
+| System default | `[docker]`<br/>`host = "tcp://192.168.1.100:2375"` | `CC_DOCKER_HOST=tcp://192.168.1.100:2375` |
+
+## Logging Settings
+
+Control verbosity and output formatting.
+
+### logging.verbosity
+
+Verbosity level.
+
+Valid options:
+
+- `0` - Normal output
+- `1` - Verbose output
+- `2` - Debug output
+
+| Default | Config Override                 | Environment Override     |
+| ------- | ------------------------------- | ------------------------ |
+| `0`     | `[logging]`<br/>`verbosity = 1` | `CC_LOGGING_VERBOSITY=1` |
+
+### logging.no_color
+
+Disable colored output.
+
+| Default | Config Override                   | Environment Override    |
+| ------- | --------------------------------- | ----------------------- |
+| `false` | `[logging]`<br/>`no_color = true` | `CC_LOGGING_NO_COLOR=1` |
+
+### logging.log_dir
+
+Custom log directory.
+
+| Default           | Config Override                                     | Environment Override                       |
+| ----------------- | --------------------------------------------------- | ------------------------------------------ |
+| Platform-specific | `[logging]`<br/>`log_dir = "/var/log/crowdcontrol"` | `CC_LOGGING_LOG_DIR=/var/log/crowdcontrol` |
+
+## GitHub Authentication
+
+GitHub integration settings. Can be configured in the config file or via environment variables.
+
+### github.installation_token
+
+Direct GitHub App installation token.
+
+| Default | Config Override                                 | Environment Override                   |
+| ------- | ----------------------------------------------- | -------------------------------------- |
+| None    | `[github]`<br/>`installation_token = "ghs_..."` | `CC_GITHUB_INSTALLATION_TOKEN=ghs_...` |
+
+### github.app_id
+
+GitHub App ID for JWT authentication.
+
+| Default | Config Override                    | Environment Override      |
+| ------- | ---------------------------------- | ------------------------- |
+| None    | `[github]`<br/>`app_id = "123456"` | `CC_GITHUB_APP_ID=123456` |
+
+### github.installation_id
+
+Installation ID for the GitHub App.
+
+| Default | Config Override                               | Environment Override                 |
+| ------- | --------------------------------------------- | ------------------------------------ |
+| None    | `[github]`<br/>`installation_id = "12345678"` | `CC_GITHUB_INSTALLATION_ID=12345678` |
+
+### github.private_key_path
+
+Path to GitHub App private key file.
+
+| Default | Config Override                                        | Environment Override                          |
+| ------- | ------------------------------------------------------ | --------------------------------------------- |
+| None    | `[github]`<br/>`private_key_path = "/path/to/key.pem"` | `CC_GITHUB_PRIVATE_KEY_PATH=/path/to/key.pem` |
+
+### github.base_url
+
+GitHub Enterprise base URL.
+
+| Default              | Config Override                                          | Environment Override                            |
+| -------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| `https://github.com` | `[github]`<br/>`base_url = "https://github.company.com"` | `CC_GITHUB_BASE_URL=https://github.company.com` |
+
+## Repository-Specific Overrides
+
+You can define custom settings for specific repositories or repository patterns.
+
+### In User Config
+
+Add repository-specific settings in your user config file:
+
+```toml
+# ~/.config/crowdcontrol/config.toml
+
+[repos."github.com/myorg/*"]
+image = "myorg/crowdcontrol:latest"
+memory = "4g"
+cpus = "2"
+
+[repos."github.com/myorg/special-project"]
+image = "special-project:dev"
+memory = "8g"
+workspace_dir = "/opt/special-workspaces"
+
+[repos."github.com/myorg/special-project".env]
+NODE_ENV = "development"
+API_KEY = "dev-key-123"
+```
+
+### In Repository Config
+
+Repositories can include their own configuration in `.crowdcontrol/config.toml`:
+
+```toml
+# .crowdcontrol/config.toml
+
+[resources]
+default_memory = "4g"
+default_cpus = "2"
+
+[docker]
+image = "custom-project:latest"
+
+[env]
+PROJECT_ENV = "development"
+```
+
+## Legacy Environment Variables
+
+For backwards compatibility, the following legacy environment variables are still supported:
+
+| Legacy Variable               | Maps To                        |
+| ----------------------------- | ------------------------------ |
+| `CROWDCONTROL_WORKSPACES_DIR` | `CC_CORE_WORKSPACES_DIR`       |
+| `CROWDCONTROL_IMAGE`          | `CC_DOCKER_IMAGE`              |
+| `CROWDCONTROL_DEFAULT_MEMORY` | `CC_RESOURCES_DEFAULT_MEMORY`  |
+| `CROWDCONTROL_DEFAULT_CPUS`   | `CC_RESOURCES_DEFAULT_CPUS`    |
+| `CROWDCONTROL_VERBOSE`        | `CC_LOGGING_VERBOSITY`         |
+| `NO_COLOR`                    | `CC_LOGGING_NO_COLOR`          |
+| `DOCKER_HOST`                 | `CC_DOCKER_HOST`               |
+| `GITHUB_INSTALLATION_TOKEN`   | `CC_GITHUB_INSTALLATION_TOKEN` |
+| `GITHUB_APP_ID`               | `CC_GITHUB_APP_ID`             |
+| `GITHUB_INSTALLATION_ID`      | `CC_GITHUB_INSTALLATION_ID`    |
+| `GITHUB_PRIVATE_KEY_PATH`     | `CC_GITHUB_PRIVATE_KEY_PATH`   |
+| `GITHUB_BASE_URL`             | `CC_GITHUB_BASE_URL`           |
+
+## System Environment
+
+### RUST_LOG
+
+Override log level.
+
+Valid options: `error`, `warn`, `info`, `debug`, `trace`
+
+| Default            | Environment Variable |
+| ------------------ | -------------------- |
+| Based on verbosity | `RUST_LOG=debug`     |
+
+## CLI Options
+
+### Global Options
+
+Available on all commands.
+
+#### --workspaces-dir
+
+Override workspaces directory.
+
+| Default      | CLI Override                           |
+| ------------ | -------------------------------------- |
+| Config value | `--workspaces-dir /path/to/workspaces` |
+
+#### --image
+
+Override Docker image.
+
+| Default      | CLI Override                  |
+| ------------ | ----------------------------- |
+| Config value | `--image crowdcontrol:v1.0.0` |
+
+#### --verbose
+
+Increase verbosity. Can be used multiple times.
+
+| Default | CLI Override  |
+| ------- | ------------- |
+| `0`     | `-v` or `-vv` |
+
+#### --no-color
+
+Disable colored output.
+
+| Default | CLI Override |
+| ------- | ------------ |
+| `false` | `--no-color` |
+
+### Command: new
+
+Create a new agent.
+
+#### --memory
+
+Memory limit for this agent.
+
+| Default                    | CLI Override  |
+| -------------------------- | ------------- |
+| `resources.default_memory` | `--memory 2g` |
+
+#### --cpus
+
+CPU limit for this agent.
+
+| Default                  | CLI Override |
+| ------------------------ | ------------ |
+| `resources.default_cpus` | `--cpus 1.5` |
+
+#### --branch
+
+Git branch to checkout.
+
+| Default                                     | CLI Override        |
+| ------------------------------------------- | ------------------- |
+| `core.default_branch` or repository default | `-b feature-branch` |
+
+#### --skip-verification
+
+Skip checking if repository contains .crowdcontrol/ directory.
+
+| Default | CLI Override          |
+| ------- | --------------------- |
+| `false` | `--skip-verification` |
+
+### Command: start
+
+Start an agent.
+
+#### --wait
+
+Wait for agent initialization to complete.
+
+| Default | CLI Override |
+| ------- | ------------ |
+| `false` | `-w`         |
+
+#### --timeout
+
+Timeout for wait operation in seconds.
+
+| Default | CLI Override    |
+| ------- | --------------- |
+| `60`    | `--timeout 120` |
+
+## Configuration Precedence
+
+Options are resolved in the following order (highest priority first):
+
+1. Command-line arguments
+2. Environment variables (CC\_\* or legacy)
+3. Repository-specific config (.crowdcontrol/config.toml)
+4. User config file (~/.config/crowdcontrol/config.toml)
+5. Default values
+
+## Container Environment
+
+The following environment variables are set inside agent containers:
+
+| Variable                 | Value                                        |
+| ------------------------ | -------------------------------------------- |
+| `CROWDCONTROL_REPO_PATH` | Full path to the cloned repository           |
+| `CROWDCONTROL_REPO_NAME` | Repository directory name                    |
+| `CROWDCONTROL_WORKSPACE` | `/workspace`                                 |
+| `GITHUB_USER_NAME`       | `crowdcontrol[bot]`                          |
+| `GITHUB_USER_EMAIL`      | `crowdcontrol[bot]@users.noreply.github.com` |
+
+Additional environment variables from repository-specific configuration are also set.
+
+## Log Files
+
+Logs are stored in the data directory.
+
+| Platform    | Location                                                       |
+| ----------- | -------------------------------------------------------------- |
+| Linux/macOS | `$XDG_DATA_HOME/crowdcontrol` or `~/.local/share/crowdcontrol` |
+| Windows     | `%LOCALAPPDATA%\crowdcontrol`                                  |
+
+Files:
+
+- `crowdcontrol.log` - Current log file
+- `crowdcontrol-<date>.log` - Archived logs

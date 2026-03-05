@@ -1,0 +1,332 @@
+---
+title: "Testing GitHub Authentication"
+description: "Test and troubleshoot GitHub authentication functionality"
+icon: "flask"
+---
+
+# Testing GitHub Authentication
+
+This document describes how to test crowdcontrol's GitHub authentication functionality using the comprehensive integration test suite.
+
+## Overview
+
+crowdcontrol includes extensive integration tests that actually create containers, perform git operations, and demonstrate both successful and failed GitHub authentication scenarios.
+
+## Test Suite Structure
+
+### Core Integration Tests
+
+**File**: `crowdcontrol-core/tests/github_end_to_end_test.rs`
+
+1. **`test_github_auth_end_to_end_workflow()`**
+
+   - **Purpose**: Demonstrates the complete workflow when GitHub authentication is NOT configured
+   - **What it does**: Creates container, initializes git repo, attempts push/pull operations
+   - **Expected result**: Git operations fail with authentication errors
+   - **Run when**: No GitHub credentials are configured (default state)
+
+2. **`test_github_auth_success_workflow()`**
+
+   - **Purpose**: Verifies GitHub authentication works correctly when configured
+   - **What it does**: Creates container with GitHub credentials, verifies git config
+   - **Expected result**: GitHub credentials are properly configured in container
+   - **Requires**: `GITHUB_INSTALLATION_TOKEN` or GitHub App credentials
+
+3. **`test_real_github_operations()`**
+   - **Purpose**: Performs actual git operations with a real GitHub repository
+   - **What it does**: Clones repo, makes changes, commits, pushes, cleans up
+   - **Expected result**: All git operations succeed, commits attributed to crowdcontrol[bot]
+   - **Requires**: GitHub credentials + `GITHUB_TEST_REPO` environment variable
+
+## Quick Test Runner
+
+Use the provided test script for easy testing:
+
+```bash
+./test-github-auth.sh
+```
+
+This script:
+
+- ✅ Checks Docker availability
+- ✅ Verifies container image exists
+- 🔍 Shows current GitHub authentication status
+- 🧪 Runs appropriate tests based on configuration
+- 📖 Provides setup instructions
+
+## Manual Test Execution
+
+### Prerequisites
+
+1. **Docker running** with `crowdcontrol:latest` image built:
+
+   ```bash
+   docker build -t crowdcontrol:latest ./container/
+   ```
+
+2. **Rust development environment** with Cargo
+
+### Test Scenarios
+
+#### Scenario 1: No GitHub Authentication (Default)
+
+**Purpose**: See what happens when GitHub isn't configured
+
+```bash
+# Ensure no GitHub credentials are set
+unset GITHUB_INSTALLATION_TOKEN
+unset GITHUB_APP_ID
+unset GITHUB_INSTALLATION_ID
+
+# Run the failure demonstration test
+cargo test --test github_end_to_end_test test_github_auth_end_to_end_workflow -- --nocapture --ignored
+```
+
+**Expected Output**:
+
+- ✅ Container creation and local git operations succeed
+- ❌ Git push/pull operations fail with authentication errors
+- 📋 Clear error messages about missing GitHub configuration
+- 🔍 Git configuration shows no GitHub-specific setup
+
+#### Scenario 2: GitHub Authentication Configured
+
+**Setup GitHub credentials** (choose one method):
+
+```bash
+# Method A: Installation Token (simplest)
+export GITHUB_INSTALLATION_TOKEN="ghs_your_token_here"
+
+# Method B: GitHub App Credentials
+export GITHUB_APP_ID="123456"
+export GITHUB_INSTALLATION_ID="789012"
+export GITHUB_PRIVATE_KEY_PATH="/path/to/your/key.pem"
+
+# Method C: GitHub Enterprise
+export GITHUB_INSTALLATION_TOKEN="ghs_your_token_here"
+export GITHUB_BASE_URL="https://github.yourcompany.com"
+```
+
+**Run success test**:
+
+```bash
+cargo test --test github_end_to_end_test test_github_auth_success_workflow -- --nocapture --ignored
+```
+
+**Expected Output**:
+
+- ✅ GitHub credentials file created in container
+- ✅ Git configured with crowdcontrol[bot] user
+- ✅ HTTPS URL rewriting configured
+- ✅ Credential helper properly set up
+
+#### Scenario 3: Real Repository Operations
+
+**Setup for real operations**:
+
+```bash
+# Set GitHub credentials (as above)
+export GITHUB_INSTALLATION_TOKEN="ghs_your_token_here"
+
+# Set test repository (must have write access)
+export GITHUB_TEST_REPO="https://github.com/yourusername/test-repo.git"
+```
+
+**Run real operations test**:
+
+```bash
+cargo test --test github_end_to_end_test test_real_github_operations -- --nocapture --ignored
+```
+
+**Expected Output**:
+
+- ✅ Clones the repository successfully
+- ✅ Makes test changes and commits them
+- ✅ Pushes changes to GitHub
+- ✅ Commits appear as "crowdcontrol[bot]" in GitHub UI
+- ✅ Cleans up by removing test commits
+
+**⚠️ Warning**: This test makes actual commits to your repository (which it then removes)
+
+## Understanding Test Output
+
+### Successful Authentication Test Output
+
+```
+=== GitHub Authentication Verification ===
+1. Checking for GitHub credentials file:
+✅ Git credentials file exists
+   Content preview: https://x-access-token:ghs_...
+
+2. Checking git global configuration:
+   User name: crowdcontrol[bot]
+   User email: crowdcontrol[bot]@users.noreply.github.com
+   Credential helper: store
+
+3. Checking HTTPS URL rewriting:
+   url.https://github.com/.insteadof=git@github.com:
+
+4. Testing git credential access:
+[main (root-commit) abc123] test: initial commit
+ 2 files changed, 2 insertions(+)
+
+✅ GitHub authentication verification complete
+```
+
+### Failed Authentication Test Output
+
+```
+=== Git Config Check ===
+No GitHub config found
+
+=== Attempting Git Push ===
+remote: Repository not found.
+fatal: Authentication failed for 'https://github.com/test-user/test-repo.git/'
+=== Git Push Exit Code: 128 ===
+✅ Git push failed as expected (no GitHub authentication)
+
+=== Attempting Git Clone of Private Repository ===
+Cloning into 'repo'...
+remote: Repository not found.
+fatal: Authentication failed for 'https://github.com/nonexistent-private/repo.git/'
+=== Git Clone Exit Code: 128 ===
+✅ Git clone failed as expected (no GitHub authentication)
+```
+
+## Test Configuration Options
+
+### Environment Variables
+
+| Variable                    | Purpose                              | Example                            |
+| --------------------------- | ------------------------------------ | ---------------------------------- |
+| `GITHUB_INSTALLATION_TOKEN` | Direct GitHub App installation token | `ghs_1234567890abcdef`             |
+| `GITHUB_APP_ID`             | GitHub App ID for JWT authentication | `123456`                           |
+| `GITHUB_INSTALLATION_ID`    | Installation ID for the GitHub App   | `789012`                           |
+| `GITHUB_PRIVATE_KEY_PATH`   | Path to GitHub App private key       | `/path/to/key.pem`                 |
+| `GITHUB_BASE_URL`           | GitHub Enterprise base URL           | `https://github.company.com`       |
+| `GITHUB_TEST_REPO`          | Repository for real operations test  | `https://github.com/user/repo.git` |
+
+### Test Filters
+
+```bash
+# Run all GitHub tests
+cargo test --test github_end_to_end_test -- --ignored
+
+# Run specific test
+cargo test --test github_end_to_end_test test_github_auth_end_to_end_workflow -- --ignored
+
+# Run with output
+cargo test --test github_end_to_end_test -- --nocapture --ignored
+
+# Run only tests matching pattern
+cargo test --test github_end_to_end_test github_auth -- --ignored
+```
+
+## Troubleshooting Tests
+
+### Common Issues
+
+1. **"Docker not found" error**
+
+   ```bash
+   # Start Docker Desktop or Docker daemon
+   docker info  # Should succeed
+   ```
+
+2. **"crowdcontrol:latest image not found"**
+
+   ```bash
+   # Build the container image
+   docker build -t crowdcontrol:latest ./container/
+   ```
+
+3. **Tests skip due to missing credentials**
+
+   - This is expected behavior when credentials aren't configured
+   - Use `./test-github-auth.sh` to see what tests are available
+
+4. **Permission errors with private key**
+
+   ```bash
+   chmod 600 /path/to/your/github-key.pem
+   ```
+
+5. **GitHub API rate limits**
+   - Wait a few minutes and retry
+   - GitHub Apps have higher rate limits than personal tokens
+
+### Test Cleanup
+
+Tests automatically clean up their containers, but if something goes wrong:
+
+```bash
+# Remove all crowdcontrol test containers
+docker ps -a --filter "name=crowdcontrol-test" --format "table {{.ID}}\t{{.Names}}\t{{.Status}}"
+docker rm $(docker ps -a --filter "name=crowdcontrol-test" -q)
+
+# Remove any orphaned volumes
+docker volume prune
+```
+
+## Integration with CI/CD
+
+### GitHub Actions Example
+
+```yaml
+name: Test GitHub Authentication
+on: [push, pull_request]
+
+jobs:
+  test-github-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build container image
+        run: docker build -t crowdcontrol:latest ./container/
+
+      - name: Test without GitHub auth (failure case)
+        run: cargo test --test github_end_to_end_test test_github_auth_end_to_end_workflow -- --ignored
+
+      - name: Test with GitHub auth (success case)
+        env:
+          GITHUB_INSTALLATION_TOKEN: ${{ secrets.GITHUB_INSTALLATION_TOKEN }}
+        run: |
+          if [ -n "$GITHUB_INSTALLATION_TOKEN" ]; then
+            cargo test --test github_end_to_end_test test_github_auth_success_workflow -- --ignored
+          else
+            echo "Skipping success test - no GitHub token configured"
+          fi
+```
+
+### Local Development Workflow
+
+1. **Daily development**: Run without GitHub auth to test basic functionality
+
+   ```bash
+   cargo test --test github_end_to_end_test test_github_auth_end_to_end_workflow -- --ignored
+   ```
+
+2. **Before releases**: Test with real GitHub authentication
+
+   ```bash
+   export GITHUB_INSTALLATION_TOKEN="your_token"
+   ./test-github-auth.sh
+   ```
+
+3. **Integration testing**: Use a dedicated test repository
+   ```bash
+   export GITHUB_TEST_REPO="https://github.com/yourorg/crowdcontrol-test.git"
+   cargo test --test github_end_to_end_test test_real_github_operations -- --ignored
+   ```
+
+## Next Steps
+
+After running these tests:
+
+1. **If tests fail**: Check the setup instructions in `docs/github-app-setup.md`
+2. **If tests pass**: Your GitHub authentication is working correctly!
+3. **For organization setup**: See `docs/github-organization-setup.md`
+4. **For production deployment**: Configure GitHub Apps with appropriate permissions
+
+The integration tests provide confidence that GitHub authentication works end-to-end, from container creation through actual git operations with real repositories.

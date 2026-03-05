@@ -1,0 +1,231 @@
+---
+title: "Troubleshoot Common Issues"
+description: "Solutions to common crowdcontrol problems and error messages"
+icon: "wrench"
+---
+
+# How to Troubleshoot Common Issues
+
+Quick solutions for the most common crowdcontrol problems.
+
+## Installation Issues
+
+### "Command not found: crowdcontrol"
+
+**Problem**: Terminal doesn't recognize `crowdcontrol` command after installation.
+
+**Solutions**:
+
+1. Restart your terminal
+2. Check if it's in your PATH: `echo $PATH`
+3. For cargo installation: `source ~/.cargo/env`
+4. For npm installation: check npm global bin directory
+
+### "Docker not found"
+
+**Problem**: `crowdcontrol doctor` reports Docker is not available.
+
+**Solutions**:
+
+1. Install Docker Desktop or Docker Engine
+2. Start Docker service: `sudo systemctl start docker` (Linux)
+3. Add user to docker group: `sudo usermod -aG docker $USER` (Linux)
+4. Restart terminal after group changes
+
+## GitHub Authentication Issues
+
+### "No GitHub configuration found"
+
+**Problem**: crowdcontrol can't authenticate with GitHub.
+
+**Solutions**:
+
+1. Set environment variables:
+   ```bash
+   export GITHUB_APP_ID="your-app-id"
+   export GITHUB_INSTALLATION_ID="your-installation-id"
+   export GITHUB_PRIVATE_KEY_PATH="/path/to/key.pem"
+   ```
+2. Verify variables are set: `env | grep GITHUB`
+3. Check private key file exists and permissions: `ls -la /path/to/key.pem`
+
+### "Authentication failed for GitHub"
+
+**Problem**: Git operations fail with authentication errors.
+
+**Solutions**:
+
+1. Verify GitHub App is installed on the repository
+2. Check App permissions include "Contents: Write"
+3. Ensure private key file has correct permissions: `chmod 600 key.pem`
+4. Test with a public repository first
+
+## Container Issues
+
+### "Port already in use"
+
+**Problem**: Cannot start container due to port conflicts.
+
+**Solutions**:
+
+1. Stop conflicting services: `sudo lsof -i :3000`
+2. Use different port in project configuration
+3. Stop other crowdcontrol containers: `crowdcontrol list` then `crowdcontrol stop <name>`
+
+### "Image not found"
+
+**Problem**: Docker can't find the specified image.
+
+**Solutions**:
+
+1. Pull image manually: `docker pull ubuntu:22.04`
+2. Check image name in configuration
+3. Use fully qualified image names: `docker.io/library/ubuntu:22.04`
+
+### "Permission denied" in container
+
+**Problem**: Cannot write files or access directories in container.
+
+**Solutions**:
+
+1. Check volume mount permissions
+2. Run container with correct user ID
+3. Adjust host directory permissions: `chmod 755 /host/path`
+
+## Project Issues
+
+### "Project already exists"
+
+**Problem**: Cannot create project with existing name.
+
+**Solutions**:
+
+1. Choose different project name
+2. Remove existing project: `crowdcontrol remove old-project`
+3. List existing projects: `crowdcontrol list`
+
+### "Failed to clone repository"
+
+**Problem**: Cannot clone Git repository during project creation.
+
+**Solutions**:
+
+1. Verify repository URL is correct
+2. Check repository exists and you have access
+3. For private repos, ensure GitHub authentication is configured
+4. Try with HTTPS URL: `https://github.com/user/repo.git`
+
+## Performance Issues
+
+### "Container starts slowly"
+
+**Problem**: Container takes long time to start.
+
+**Solutions**:
+
+1. Use smaller base images: `alpine` instead of `ubuntu`
+2. Pre-pull commonly used images: `docker pull node:18-alpine`
+3. Check available disk space: `df -h`
+4. Clean up unused containers: `docker system prune`
+
+### "High memory usage"
+
+**Problem**: crowdcontrol containers use too much memory.
+
+**Solutions**:
+
+1. Limit container memory: add memory limits to configuration
+2. Stop unused containers: `crowdcontrol list` then `crowdcontrol stop <name>`
+3. Use lighter base images
+4. Check for memory leaks in your applications
+
+## Network Issues
+
+### "Cannot connect to container"
+
+**Problem**: Cannot access services running in container.
+
+**Solutions**:
+
+1. Check port mappings in configuration
+2. Verify service is running: `crowdcontrol connect <project>` then `ps aux`
+3. Test with `curl localhost:3000` inside container
+4. Check firewall settings
+
+### "DNS resolution fails"
+
+**Problem**: Container cannot resolve external hostnames.
+
+**Solutions**:
+
+1. Check Docker DNS settings
+2. Restart Docker service
+3. Configure custom DNS in container
+4. Check corporate proxy/firewall settings
+
+## Getting More Help
+
+### Enable Debug Logging
+
+Get more detailed error information:
+
+```bash
+export CROWDCONTROL_LOG_LEVEL=debug
+crowdcontrol your-command
+```
+
+### Check System Health
+
+Run the built-in diagnostics:
+
+```bash
+crowdcontrol doctor
+```
+
+### Collect Debugging Information
+
+When reporting issues, include:
+
+```bash
+# System information
+crowdcontrol --version
+docker --version
+uname -a
+
+# Project status
+crowdcontrol list
+crowdcontrol logs your-project
+
+# Recent logs
+tail -50 ~/.crowdcontrol/logs/crowdcontrol.log
+```
+
+### Still Need Help?
+
+1. Check our [GitHub Issues](https://github.com/your-org/crowdcontrol/issues)
+2. Search existing issues for your problem
+3. Create a new issue with:
+   - Clear description of the problem
+   - Steps to reproduce
+   - System information (`crowdcontrol doctor` output)
+   - Error messages and logs
+
+### Emergency Reset
+
+If crowdcontrol is completely broken:
+
+```bash
+# Stop all containers
+docker stop $(docker ps -q --filter "label=crowdcontrol")
+
+# Remove all crowdcontrol containers
+docker rm $(docker ps -aq --filter "label=crowdcontrol")
+
+# Clean up volumes (WARNING: This removes all project data)
+docker volume ls --filter "label=crowdcontrol" -q | xargs docker volume rm
+
+# Reinstall crowdcontrol
+cargo install --force crowdcontrol-cli
+```
+
+**Warning**: Emergency reset will delete all your crowdcontrol projects and data.

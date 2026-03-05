@@ -8,10 +8,6 @@ pub struct DoctorCommand {
     /// Automatically repair inconsistencies if possible
     #[arg(long)]
     repair: bool,
-
-    /// Show detailed information about each check
-    #[arg(long)]
-    verbose: bool,
 }
 
 pub async fn execute(config: Config, cmd: DoctorCommand) -> Result<()> {
@@ -42,7 +38,7 @@ pub async fn execute(config: Config, cmd: DoctorCommand) -> Result<()> {
     );
 
     for (i, issue) in inconsistencies.iter().enumerate() {
-        println!("\n{}. {}", i + 1, format_issue(issue, cmd.verbose));
+        println!("\n{}. {}", i + 1, format_issue(issue, false));
     }
 
     // Repair if requested

@@ -1,0 +1,97 @@
+---
+title: "Commands"
+description: "Complete reference for all CLI commands"
+icon: "terminal"
+---
+
+# CLI Commands
+
+crowdcontrol provides a command-line interface for managing containerized development environments.
+
+## Installation
+
+Install crowdcontrol using your preferred package manager:
+
+<Tabs>
+  <Tab title="Using Cargo">```bash cargo install crowdcontrol-cli ```</Tab>
+  <Tab title="Using npm">```bash npm install -g crowdcontrol-cli ```</Tab>
+</Tabs>
+
+## Core Commands
+
+### Create New Project
+
+Create a new crowdcontrol project:
+
+```bash
+crowdcontrol new [PROJECT_NAME] [REPOSITORY_URL]
+```
+
+**Examples:**
+
+```bash
+crowdcontrol new my-project
+crowdcontrol new web-app https://github.com/user/repo.git
+```
+
+### Start Development Environment
+
+Start the containerized environment:
+
+```bash
+crowdcontrol start [PROJECT_NAME]
+```
+
+### Connect to Container
+
+Connect to a running development container:
+
+```bash
+crowdcontrol connect [PROJECT_NAME]
+```
+
+### Stop Environment
+
+Stop the development environment:
+
+```bash
+crowdcontrol stop [PROJECT_NAME]
+```
+
+### Remove Project
+
+Remove a project and its resources:
+
+```bash
+crowdcontrol remove [PROJECT_NAME]
+```
+
+## Information Commands
+
+### List Projects
+
+List all crowdcontrol projects:
+
+```bash
+crowdcontrol list
+```
+
+### View Logs
+
+View container logs:
+
+```bash
+crowdcontrol logs [PROJECT_NAME]
+```
+
+### System Health Check
+
+Check system configuration:
+
+```bash
+crowdcontrol doctor
+```
+
+## Configuration
+
+crowdcontrol uses configuration files and environment variables for setup. See the [Configuration Reference](/reference/configuration) for details.

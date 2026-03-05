@@ -324,3 +324,114 @@ impl DockerClient {
             .collect())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::agent::{save_agent_metadata, update_agent_metadata};
+    use crate::{test_config_with_dir, Agent};
+    use chrono::Utc;
+    use std::fs;
+    use std::path::PathBuf;
+    use tempfile::tempdir;
+
+    fn create_test_config() -> (Config, tempfile::TempDir) {
+        let temp_dir = tempdir().unwrap();
+        let config = test_config_with_dir(temp_dir.path());
+        (config, temp_dir)
+    }
+
+    fn create_test_agent(name: &str, status: AgentStatus) -> Agent {
+        let container_id = if status == AgentStatus::Running {
+            Some("test-container-id".to_string())
+        } else {
+            None
+        };
+
+        Agent {
+            name: name.to_string(),
+            status,
+            container_id,
+            repository: "https://github.com/test/repo.git".to_string(),
+            branch: Some("main".to_string()),
+            created_at: Utc::now(),
+            workspace_path: PathBuf::from("/test/workspace"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_detect_corrupted_metadata() {
+        let (config, _temp_dir) = create_test_config();
+        let agent = create_test_agent("corrupt-test", AgentStatus::Created);
+
+        // Save valid metadata first
+        save_agent_metadata(&config, &agent).unwrap();
+
+        // Corrupt the metadata file
+        let metadata_path = config
+            .agent_workspace_path("corrupt-test")
+            .join(".crowdcontrol")
+            .join("metadata.json");
+        fs::write(&metadata_path, "{ invalid json").unwrap();
+
+        // Validate should detect corruption
+        let validator = StateValidator::new(config).unwrap();
+        let issues = validator.validate_all().await.unwrap();
+
+        // Find the specific CorruptedMetadata issue for our test agent
+        let corrupted_metadata_issues: Vec<_> = issues
+            .iter()
+            .filter(|issue| matches!(
+                issue,
+                StateInconsistency::CorruptedMetadata { agent_name, .. } if agent_name == "corrupt-test"
+            ))
+            .collect();
+
+        assert_eq!(corrupted_metadata_issues.len(), 1);
+        match corrupted_metadata_issues[0] {
+            StateInconsistency::CorruptedMetadata {
+                agent_name,
+                error: _,
+            } => {
+                assert_eq!(agent_name, "corrupt-test");
+            }
+            _ => panic!("Expected CorruptedMetadata inconsistency"),
+        }
+    }
+
+    #[test]
+    fn test_metadata_container_id_persistence() {
+        let (config, _temp_dir) = create_test_config();
+        let mut agent = create_test_agent("status-test", AgentStatus::Running);
+        agent.container_id = Some("test-container-123".to_string());
+
+        // Save metadata with container ID
+        save_agent_metadata(&config, &agent).unwrap();
+
+        // Load metadata and verify container ID is preserved
+        // Note: Status is always Created when loaded, as actual status
+        // is determined dynamically via Docker API
+        let loaded_agent =
+            crate::agent::load_agent_metadata(&config, "status-test").unwrap();
+
+        assert_eq!(loaded_agent.status, AgentStatus::Created);
+        assert_eq!(
+            loaded_agent.container_id,
+            Some("test-container-123".to_string())
+        );
+        assert_eq!(loaded_agent.name, "status-test");
+
+        // Update to remove container ID (simulating container removal)
+        update_agent_metadata(&config, "status-test", |agent| {
+            agent.container_id = None;
+            Ok(())
+        })
+        .unwrap();
+
+        // Verify the update
+        let updated_agent =
+            crate::agent::load_agent_metadata(&config, "status-test").unwrap();
+        assert_eq!(updated_agent.status, AgentStatus::Created);
+        assert_eq!(updated_agent.container_id, None);
+    }
+}

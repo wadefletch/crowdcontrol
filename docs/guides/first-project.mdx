@@ -1,0 +1,398 @@
+---
+title: "Build Your First Real Project"
+description: "Create a complete Node.js application with GitHub integration using crowdcontrol"
+icon: "code"
+---
+
+# Build Your First Real Project
+
+In this tutorial, you'll build a complete Node.js web application with GitHub integration. This builds on the [Getting Started tutorial](/tutorials/getting-started) and shows crowdcontrol's real-world capabilities.
+
+**What you'll create:** A simple task management web app that automatically pushes to GitHub.
+
+**Time required:** 30-45 minutes
+
+## What You'll Learn
+
+By the end of this tutorial, you'll have:
+
+- ✅ A complete Node.js web application
+- ✅ GitHub integration with automatic commits
+- ✅ Understanding of crowdcontrol's development workflow
+- ✅ Experience with container-based development
+
+## Prerequisites
+
+Before starting:
+
+- Complete the [Getting Started tutorial](/tutorials/getting-started)
+- Have a GitHub account
+- Know basic HTML/JavaScript (we'll provide all code)
+
+## Step 1: Create the Project from GitHub
+
+Instead of an empty project, let's start with a GitHub repository:
+
+```bash
+crowdcontrol new task-app https://github.com/your-username/task-app.git
+```
+
+<Note>
+  If you don't have this repository, create it on GitHub first, or use our
+  template: `https://github.com/crowdcontrol-examples/node-task-app.git`
+</Note>
+
+crowdcontrol will:
+
+- Clone the repository
+- Set up the development environment
+- Configure GitHub integration
+
+## Step 2: Start and Connect
+
+Start your development environment:
+
+```bash
+cd task-app
+crowdcontrol start
+crowdcontrol connect
+```
+
+You're now in a containerized environment with your GitHub repository ready.
+
+## Step 3: Set Up the Basic App Structure
+
+Create the application structure:
+
+```bash
+# Create the main application file
+cat > app.js << 'EOF'
+const express = require('express');
+const path = require('path');
+const app = express();
+const PORT = 3000;
+
+// Middleware
+app.use(express.static('public'));
+app.use(express.json());
+
+// In-memory task storage (for simplicity)
+let tasks = [
+  { id: 1, text: 'Learn crowdcontrol', completed: false },
+  { id: 2, text: 'Build awesome apps', completed: false }
+];
+let nextId = 3;
+
+// Routes
+app.get('/api/tasks', (req, res) => {
+  res.json(tasks);
+});
+
+app.post('/api/tasks', (req, res) => {
+  const task = {
+    id: nextId++,
+    text: req.body.text,
+    completed: false
+  };
+  tasks.push(task);
+  res.json(task);
+});
+
+app.delete('/api/tasks/:id', (req, res) => {
+  tasks = tasks.filter(t => t.id !== parseInt(req.params.id));
+  res.json({ success: true });
+});
+
+app.listen(PORT, () => {
+  console.log(`Task app running on http://localhost:${PORT}`);
+});
+EOF
+```
+
+## Step 4: Create the Frontend
+
+Create the public directory and HTML:
+
+```bash
+mkdir -p public
+
+cat > public/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - crowdcontrol Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .task { padding: 10px; border: 1px solid #ddd; margin: 5px 0; border-radius: 5px; }
+        .completed { text-decoration: line-through; color: #666; }
+        button { margin-left: 10px; padding: 5px 10px; }
+        input[type="text"] { width: 300px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Task Manager</h1>
+    <p><em>Built with crowdcontrol containerized development</em></p>
+
+    <div>
+        <input type="text" id="newTask" placeholder="Enter a new task">
+        <button onclick="addTask()">Add Task</button>
+    </div>
+
+    <div id="tasks"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+EOF
+```
+
+Create the frontend JavaScript:
+
+```bash
+cat > public/app.js << 'EOF'
+let tasks = [];
+
+async function loadTasks() {
+    const response = await fetch('/api/tasks');
+    tasks = await response.json();
+    renderTasks();
+}
+
+async function addTask() {
+    const input = document.getElementById('newTask');
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    });
+
+    const newTask = await response.json();
+    tasks.push(newTask);
+    input.value = '';
+    renderTasks();
+}
+
+async function deleteTask(id) {
+    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    tasks = tasks.filter(t => t.id !== id);
+    renderTasks();
+}
+
+function renderTasks() {
+    const container = document.getElementById('tasks');
+    container.innerHTML = tasks.map(task => `
+        <div class="task ${task.completed ? 'completed' : ''}">
+            ${task.text}
+            <button onclick="deleteTask(${task.id})">Delete</button>
+        </div>
+    `).join('');
+}
+
+// Load tasks when page loads
+loadTasks();
+EOF
+```
+
+## Step 5: Set Up Package.json
+
+Create the Node.js project configuration:
+
+```bash
+cat > package.json << 'EOF'
+{
+  "name": "crowdcontrol-task-app",
+  "version": "1.0.0",
+  "description": "A simple task manager built with crowdcontrol",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "keywords": ["crowdcontrol", "tutorial", "node", "express"],
+  "author": "crowdcontrol Tutorial",
+  "license": "MIT"
+}
+EOF
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+## Step 6: Test Your Application
+
+Start the application:
+
+```bash
+npm start
+```
+
+You should see: `Task app running on http://localhost:3000`
+
+Open another terminal and test the API:
+
+```bash
+# In another terminal, connect to the same container
+crowdcontrol connect
+
+# Test the API
+curl http://localhost:3000/api/tasks
+```
+
+You should see the initial tasks in JSON format.
+
+## Step 7: Commit Your Work
+
+Now let's commit your work to GitHub:
+
+```bash
+# Configure git (crowdcontrol should have done this automatically)
+git config user.name "crowdcontrol[bot]"
+git config user.email "crowdcontrol[bot]@users.noreply.github.com"
+
+# Add and commit your files
+git add .
+git commit -m "feat: initial task manager application
+
+- Express.js backend with task API
+- Frontend with task management UI
+- Basic CRUD operations for tasks
+
+🤖 Built with crowdcontrol containerized development"
+
+# Push to GitHub
+git push origin main
+```
+
+## Step 8: Verify on GitHub
+
+Visit your GitHub repository in a web browser. You should see:
+
+- Your new files committed
+- The commit showing as authored by "crowdcontrol[bot]"
+- Your README updated with project information
+
+## Step 9: Add a Feature
+
+Let's add a feature to mark tasks as completed:
+
+```bash
+# Update the backend API in app.js
+# Add this route after the existing routes:
+cat >> app.js << 'EOF'
+
+app.patch('/api/tasks/:id', (req, res) => {
+  const task = tasks.find(t => t.id === parseInt(req.params.id));
+  if (task) {
+    task.completed = req.body.completed;
+    res.json(task);
+  } else {
+    res.status(404).json({ error: 'Task not found' });
+  }
+});
+EOF
+```
+
+Update the frontend to support task completion:
+
+```bash
+# Add the toggle function to public/app.js
+cat >> public/app.js << 'EOF'
+
+async function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    const response = await fetch(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !task.completed })
+    });
+
+    const updatedTask = await response.json();
+    const index = tasks.findIndex(t => t.id === id);
+    tasks[index] = updatedTask;
+    renderTasks();
+}
+EOF
+```
+
+Update the renderTasks function:
+
+```bash
+# Replace the renderTasks function in public/app.js
+sed -i 's/<button onclick="deleteTask(\${task.id})">Delete<\/button>/<button onclick="toggleTask(\${task.id})">\${task.completed ? "Undo" : "Complete"}<\/button><button onclick="deleteTask(\${task.id})">Delete<\/button>/g' public/app.js
+```
+
+## Step 10: Test and Commit the New Feature
+
+Restart your application:
+
+```bash
+# Stop the current app (Ctrl+C)
+npm start
+```
+
+Test the new functionality, then commit:
+
+```bash
+git add .
+git commit -m "feat: add task completion functionality
+
+- Add PATCH endpoint for updating task status
+- Frontend toggle buttons for completing tasks
+- Visual indication of completed tasks
+
+🤖 Enhanced with crowdcontrol"
+
+git push origin main
+```
+
+## What You've Accomplished
+
+Congratulations! You've built a complete application and learned:
+
+- ✅ **Container-based development** - All work done in isolated environment
+- ✅ **GitHub integration** - Automatic authentication and pushing
+- ✅ **Real development workflow** - Edit, test, commit, push cycle
+- ✅ **Persistent development** - Files saved between container sessions
+- ✅ **API development** - Built REST endpoints
+- ✅ **Full-stack application** - Frontend and backend integration
+
+## Next Steps
+
+Now you understand crowdcontrol's power! Continue learning:
+
+<CardGroup cols={2}>
+  <Card
+    title="GitHub Setup Tutorial"
+    icon="github"
+    href="/tutorials/github-setup"
+  >
+    Learn advanced GitHub integration features
+  </Card>
+  <Card title="How-to Guides" icon="book" href="/how-to/install">
+    Solve specific problems and configure crowdcontrol
+  </Card>
+</CardGroup>
+
+## Clean Up
+
+When you're done experimenting:
+
+```bash
+exit  # Exit the container
+crowdcontrol stop  # Stop the environment
+crowdcontrol remove task-app  # Remove the project (optional)
+```
+
+You've mastered the crowdcontrol development workflow!
